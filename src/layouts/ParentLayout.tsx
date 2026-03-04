@@ -73,7 +73,7 @@ export function ParentLayout() {
 
       <div className={[styles.content, !sidebarOpen ? styles.sidebarCollapsed : ''].filter(Boolean).join(' ')}>
         <header className={styles.topBar}>
-          <button className={styles.menuBtn} onClick={() => setMobileOpen(true)}>
+          <button className={styles.menuBtn} onClick={() => setMobileOpen(prev => !prev)}>
             ☰
           </button>
           <div className={styles.userInfo}>

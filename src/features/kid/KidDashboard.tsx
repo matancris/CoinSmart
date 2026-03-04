@@ -13,10 +13,11 @@ const TX_ICONS: Record<TransactionType, string> = {
   purchase: '🛒',
   transfer_to_savings: '�',
   transfer_from_savings: '🔙',
+  deposit_to_savings: '💵',
   interest: '✨',
 }
 
-const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'interest']
+const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest']
 
 export function KidDashboard() {
   const { t } = useTranslation()

@@ -32,6 +32,7 @@ interface WalletState {
       savingsType: SavingsType
     }) => Promise<boolean>
     transferToSavings: (userId: string, savingsId: string, amount: number, createdBy: string) => Promise<boolean>
+    depositToSavings: (userId: string, savingsId: string, amount: number, createdBy: string) => Promise<boolean>
     withdrawFromSavings: (userId: string, savingsId: string, amount: number, createdBy: string, force?: boolean) => Promise<boolean>
     deleteSavingsGoal: (userId: string, savingsId: string, force?: boolean) => Promise<boolean>
     setBalance: (userId: string, newBalance: number) => Promise<boolean>
@@ -161,6 +162,19 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         return true
       } catch (error) {
         const appError = handleError(error, { operation: 'transferToSavings' })
+        toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
+        return false
+      }
+    },
+
+    depositToSavings: async (userId, savingsId, amount, createdBy) => {
+      try {
+        await savingsService.depositToSavings(userId, savingsId, amount, createdBy)
+        await get().actions.fetchWallet(userId)
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        const appError = handleError(error, { operation: 'depositToSavings' })
         toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
         return false
       }

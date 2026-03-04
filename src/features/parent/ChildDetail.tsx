@@ -15,6 +15,7 @@ const TX_ICONS: Record<TransactionType, string> = {
   purchase: '🛒',
   transfer_to_savings: '🚀',
   transfer_from_savings: '🔙',
+  deposit_to_savings: '💵',
   interest: '✨',
 }
 
@@ -44,7 +45,7 @@ export function ChildDetail() {
 
   const [showTransfer, setShowTransfer] = useState<string | null>(null)
   const [transferAmount, setTransferAmount] = useState('')
-  const [transferMode, setTransferMode] = useState<'in' | 'out'>('in')
+  const [transferMode, setTransferMode] = useState<'in' | 'out' | 'direct'>('in')
 
   const [showSetBalance, setShowSetBalance] = useState(false)
   const [newBalance, setNewBalance] = useState('')
@@ -120,10 +121,12 @@ export function ChildDetail() {
     if (numAmount <= 0) return
 
     setSubmitting(true)
-    const fn = transferMode === 'in'
-      ? walletActions.transferToSavings
-      : (userId: string, savingsId: string, amt: number, createdBy: string) =>
-          walletActions.withdrawFromSavings(userId, savingsId, amt, createdBy, true)
+    const fn = transferMode === 'direct'
+      ? walletActions.depositToSavings
+      : transferMode === 'in'
+        ? walletActions.transferToSavings
+        : (userId: string, savingsId: string, amt: number, createdBy: string) =>
+            walletActions.withdrawFromSavings(userId, savingsId, amt, createdBy, true)
     const success = await fn(child.id, showTransfer, numAmount, appUser.id)
     setSubmitting(false)
 
@@ -307,6 +310,13 @@ export function ChildDetail() {
                     <Button
                       variant="secondary"
                       size="sm"
+                      onClick={() => { setShowTransfer(goal.id); setTransferMode('direct') }}
+                    >
+                      {t('parent.depositToSavings')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => { setShowTransfer(goal.id); setTransferMode('out') }}
                     >
                       {t('parent.withdrawFromSavings')}
@@ -336,7 +346,7 @@ export function ChildDetail() {
         <h2 className={styles.sectionTitle}>{t('parent.transactionHistory')}</h2>
         <div className={styles.transactionList}>
           {transactions.map(tx => {
-            const isPositive = ['deposit', 'transfer_from_savings', 'interest'].includes(tx.type)
+            const isPositive = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest'].includes(tx.type)
             return (
               <div key={tx.id} className={styles.txRow}>
                 <div className={styles.txInfo}>
@@ -451,7 +461,7 @@ export function ChildDetail() {
       <Modal
         isOpen={!!showTransfer}
         onClose={() => setShowTransfer(null)}
-        title={transferMode === 'in' ? t('parent.transferToSavings') : t('parent.withdrawFromSavings')}
+        title={transferMode === 'direct' ? t('parent.depositToSavings') : transferMode === 'in' ? t('parent.transferToSavings') : t('parent.withdrawFromSavings')}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowTransfer(null)}>

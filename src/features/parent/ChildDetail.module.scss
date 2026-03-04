@@ -4,6 +4,10 @@
   @include page-container;
   @include flex-col(6);
   animation: fadeIn $transition-slow;
+
+  @include respond-below(sm) {
+    padding: space(3);
+  }
 }
 
 .backBtn {
@@ -23,15 +27,30 @@
 .profileHeader {
   @include flex-row(4);
 
+  @include respond-below(sm) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
   .profileInfo {
     @include flex-col(1);
+    min-width: 0;
 
     .profileName {
       @include heading($text-2xl);
+
+      @include respond-below(sm) {
+        font-size: $text-xl;
+      }
     }
 
     .profileBalance {
       @include text($text-xl, $font-bold, $clr-primary);
+      display: flex;
+      align-items: center;
+      gap: space(2);
+      flex-wrap: wrap;
     }
 
     .profileSavings {
@@ -53,13 +72,17 @@
   @include flex-col(4);
   padding: space(5);
 
+  @include respond-below(sm) {
+    padding: space(3);
+  }
+
   .formRow {
     @include flex-row(3);
     flex-wrap: wrap;
 
     > * {
       flex: 1;
-      min-width: rem(150);
+      min-width: rem(120);
     }
   }
 
@@ -145,6 +168,7 @@
 
   .goalActions {
     @include flex-row(2);
+    flex-wrap: wrap;
   }
 }
 
@@ -238,9 +262,13 @@
   @include card-flat;
   @include flex-between;
   padding: space(3) space(4);
+  flex-wrap: wrap;
+  gap: space(2);
 
   .txInfo {
     @include flex-row(3);
+    min-width: 0;
+    flex: 1;
 
     .txIcon {
       @include flex-center;
@@ -248,13 +276,16 @@
       height: 2.25rem;
       border-radius: $radius-full;
       font-size: $text-base;
+      flex-shrink: 0;
     }
 
     .txDetails {
       @include flex-col(0);
+      min-width: 0;
 
       .txDesc {
         @include text($text-sm, $font-medium, $clr-text-primary);
+        @include truncate;
       }
 
       .txDate {
@@ -265,6 +296,7 @@
 
   .txAmount {
     @include text($text-sm, $font-bold);
+    flex-shrink: 0;
 
     &.positive {
       color: $clr-kid-deposit;
@@ -278,6 +310,11 @@
   .txActions {
     @include flex-row(1);
     margin-inline-start: space(3);
+    flex-shrink: 0;
+
+    @include respond-below(sm) {
+      margin-inline-start: 0;
+    }
   }
 }
 

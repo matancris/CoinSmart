@@ -4,6 +4,7 @@
   display: flex;
   min-height: 100vh;
   background: $clr-parent-bg;
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -34,6 +35,7 @@
 
   @include respond-below(md) {
     transform: translateX(-100%);
+    transition: transform $transition-base, width $transition-base;
 
     [dir='rtl'] & {
       transform: translateX(100%);
@@ -41,6 +43,17 @@
 
     &.mobileOpen {
       transform: translateX(0);
+      width: $sidebar-width;
+
+      .navLabel,
+      .sidebarTitle {
+        display: block;
+      }
+
+      .navItem {
+        justify-content: flex-start;
+        padding-inline: space(4);
+      }
     }
   }
 }
@@ -116,6 +129,7 @@
   margin-inline-start: $sidebar-width;
   transition: margin-inline-start $transition-base;
   min-height: 100vh;
+  min-width: 0;
 
   &.sidebarCollapsed {
     margin-inline-start: $sidebar-width-collapsed;
@@ -123,6 +137,7 @@
 
   @include respond-below(md) {
     margin-inline-start: 0;
+    width: 100%;
   }
 }
 

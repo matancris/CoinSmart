@@ -101,6 +101,47 @@ export async function transferToSavings(
   await batch.commit()
 }
 
+export async function depositToSavings(
+  userId: string,
+  savingsId: string,
+  amount: number,
+  createdBy: string
+): Promise<void> {
+  const userRef = doc(db, 'users', userId)
+  const savingsRef = doc(db, 'users', userId, 'savings', savingsId)
+  const [userSnap, savingsSnap] = await Promise.all([getDoc(userRef), getDoc(savingsRef)])
+
+  if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('Not found')
+
+  const currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
+  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+  const balance = (userSnap.data().balance as number) ?? 0
+
+  const batch = writeBatch(db)
+
+  batch.update(userRef, {
+    totalSavings: totalSavings + amount,
+  })
+
+  batch.update(savingsRef, {
+    currentAmount: currentSavings + amount,
+  })
+
+  const txRef = doc(collection(db, 'users', userId, 'transactions'))
+  batch.set(txRef, {
+    id: txRef.id,
+    type: 'deposit_to_savings',
+    amount,
+    balanceAfter: balance,
+    description: savingsSnap.data().name,
+    savingsId,
+    createdAt: new Date(),
+    createdBy,
+  })
+
+  await batch.commit()
+}
+
 export async function withdrawFromSavings(
   userId: string,
   savingsId: string,
@@ -123,13 +164,52 @@ export async function withdrawFromSavings(
     }
   }
 
-  const currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
-  if (currentSavings < amount) throw new Error('errors.insufficientBalance')
-
+  let currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
+  const interestRate = (savingsSnap.data().interestRate as number) ?? 0
+  const accruedInterest = (savingsSnap.data().accruedInterest as number) ?? 0
   const balance = (userSnap.data().balance as number) ?? 0
-  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+  let totalSavings = (userSnap.data().totalSavings as number) ?? 0
 
+  const now = new Date()
   const batch = writeBatch(db)
+  let proRataInterest = 0
+
+  if (interestRate > 0 && currentSavings > 0) {
+    const lastInterestAt = savingsSnap.data().lastInterestAt
+      ? toDate(savingsSnap.data().lastInterestAt)
+      : savingsSnap.data().createdAt
+        ? toDate(savingsSnap.data().createdAt)
+        : now
+    const daysElapsed = Math.floor(
+      (now.getTime() - lastInterestAt.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+
+    if (daysElapsed > 0) {
+      proRataInterest = Math.round(
+        currentSavings * (interestRate / 12) * (daysElapsed / daysInMonth) * 100
+      ) / 100
+    }
+
+    if (proRataInterest > 0) {
+      currentSavings += proRataInterest
+      totalSavings += proRataInterest
+
+      const interestTxRef = doc(collection(db, 'users', userId, 'transactions'))
+      batch.set(interestTxRef, {
+        id: interestTxRef.id,
+        type: 'interest',
+        amount: proRataInterest,
+        balanceAfter: balance,
+        description: savingsSnap.data().name,
+        savingsId,
+        createdAt: now,
+        createdBy: 'system',
+      })
+    }
+  }
+
+  if (currentSavings < amount) throw new Error('errors.insufficientBalance')
 
   batch.update(userRef, {
     balance: balance + amount,
@@ -138,6 +218,10 @@ export async function withdrawFromSavings(
 
   batch.update(savingsRef, {
     currentAmount: currentSavings - amount,
+    ...(proRataInterest > 0 && {
+      accruedInterest: accruedInterest + proRataInterest,
+      lastInterestAt: now,
+    }),
   })
 
   const txRef = doc(collection(db, 'users', userId, 'transactions'))
@@ -148,7 +232,7 @@ export async function withdrawFromSavings(
     balanceAfter: balance + amount,
     description: savingsSnap.data().name,
     savingsId,
-    createdAt: new Date(),
+    createdAt: now,
     createdBy,
   })
 

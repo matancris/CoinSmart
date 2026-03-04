@@ -80,7 +80,8 @@
     "transferToSavings": "העבר לחיסכון",
     "withdrawFromSavings": "משוך מחיסכון",
     "purchase": "קנייה",
-    "setBalance": "קבע יתרה"
+    "setBalance": "קבע יתרה",
+    "depositToSavings": "הפקדה ישירה לחיסכון"
   },
   "transaction": {
     "deposit": "הפקדה",
@@ -88,6 +89,7 @@
     "purchase": "קנייה",
     "transfer_to_savings": "העברה לחיסכון",
     "transfer_from_savings": "משיכה מחיסכון",
+    "deposit_to_savings": "הפקדה ישירה לחיסכון",
     "interest": "ריבית"
   },
   "common": {

@@ -140,6 +140,8 @@ function getBalanceDelta(type: TransactionType, amount: number): number {
     case 'purchase':
     case 'transfer_to_savings':
       return -amount
+    case 'deposit_to_savings':
+      return 0
   }
 }
 

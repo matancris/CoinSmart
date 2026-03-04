@@ -80,7 +80,8 @@
     "transferToSavings": "Transfer to Savings",
     "withdrawFromSavings": "Withdraw from Savings",
     "purchase": "Purchase",
-    "setBalance": "Set Balance"
+    "setBalance": "Set Balance",
+    "depositToSavings": "Direct Deposit to Savings"
   },
   "transaction": {
     "deposit": "Deposit",
@@ -88,6 +89,7 @@
     "purchase": "Purchase",
     "transfer_to_savings": "Transfer to Savings",
     "transfer_from_savings": "Withdrawal from Savings",
+    "deposit_to_savings": "Direct deposit to savings",
     "interest": "Interest"
   },
   "common": {
