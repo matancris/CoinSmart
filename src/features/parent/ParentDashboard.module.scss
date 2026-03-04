@@ -4,40 +4,94 @@
   @include page-container;
   @include flex-col(6);
   animation: fadeIn $transition-slow;
+
+  @include respond-below(sm) {
+    gap: space(4);
+    padding: space(3);
+  }
 }
 
 .title {
   @include heading($text-2xl);
+
+  @include respond-below(sm) {
+    font-size: $text-xl;
+  }
 }
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(rem(200), 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: space(4);
+
+  @include respond-below(md) {
+    gap: space(3);
+  }
+
+  @include respond-below(sm) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: space(2);
+  }
 }
 
 .statCard {
   @include card;
   @include flex-col(2);
   padding: space(5);
+  align-items: center;
+  text-align: center;
 
-  .statLabel {
-    @include text($text-sm, $font-medium, $clr-text-secondary);
+  @include respond-below(md) {
+    padding: space(4);
+    gap: space(1);
   }
 
-  .statValue {
-    @include heading($text-2xl);
+  @include respond-below(sm) {
+    padding: space(3) space(2);
+    gap: space(1);
   }
 
   .statIcon {
     font-size: $text-2xl;
+
+    @include respond-below(sm) {
+      font-size: $text-lg;
+    }
+  }
+
+  .statLabel {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+
+    @include respond-below(sm) {
+      font-size: $text-xs;
+    }
+  }
+
+  .statValue {
+    @include heading($text-2xl);
+
+    @include respond-below(md) {
+      font-size: $text-xl;
+    }
+
+    @include respond-below(sm) {
+      font-size: $text-base;
+    }
   }
 }
 
 .familyCodeCard {
   @include card;
   @include flex-between;
-  padding: space(5);
+  padding: space(4) space(5);
+
+  @include respond-below(sm) {
+    flex-direction: column;
+    align-items: center;
+    gap: space(3);
+    padding: space(4);
+    text-align: center;
+  }
 
   .codeLabel {
     @include text($text-sm, $font-medium, $clr-text-secondary);
@@ -48,6 +102,10 @@
     color: $clr-primary;
     letter-spacing: 0.15em;
     direction: ltr;
+
+    @include respond-below(sm) {
+      font-size: $text-xl;
+    }
   }
 
   .shareBtn {
@@ -56,30 +114,68 @@
   }
 }
 
+.childrenSection {
+  @include flex-col(3);
+
+  @include respond-below(sm) {
+    gap: space(2);
+  }
+}
+
+.childrenTitle {
+  @include heading($text-lg);
+
+  @include respond-below(sm) {
+    font-size: $text-base;
+  }
+}
+
 .childrenGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(rem(220), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(rem(200), 1fr));
   gap: space(4);
+
+  @include respond-below(sm) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: space(2);
+  }
 }
 
 .childCard {
   @include card;
-  @include flex-col(3);
+  @include flex-col(2);
   @include interactive;
   padding: space(5);
   text-decoration: none;
   align-items: center;
   text-align: center;
 
+  @include respond-below(sm) {
+    padding: space(3);
+    gap: space(1);
+  }
+
   .childName {
     @include text($text-base, $font-semibold, $clr-text-primary);
+
+    @include respond-below(sm) {
+      font-size: $text-sm;
+    }
   }
 
   .childBalance {
     @include text($text-lg, $font-bold, $clr-primary);
+
+    @include respond-below(sm) {
+      font-size: $text-base;
+    }
   }
 
   .childSavings {
     @include text($text-sm, $font-regular, $clr-text-secondary);
+
+    @include respond-below(sm) {
+      font-size: $text-xs;
+    }
   }
 }

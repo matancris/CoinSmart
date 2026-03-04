@@ -78,34 +78,37 @@ export function ParentDashboard() {
         </Button>
       </div>
 
-      <div className={styles.childrenGrid}>
-        {children.map(child => (
-          <Link
-            key={child.id}
-            to={`/manage/children/${child.id}`}
-            className={styles.childCard}
-          >
-            <Avatar emoji={child.avatarEmoji} size="lg" />
-            <span className={styles.childName}>{child.displayName}</span>
-            <span className={styles.childBalance}>{formatCurrency(child.balance)}</span>
-            <span className={styles.childSavings}>
-              {t('kid.savings')}: {formatCurrency(child.totalSavings)}
-            </span>
-          </Link>
-        ))}
+      <div className={styles.childrenSection}>
+        <h2 className={styles.childrenTitle}>{t('parent.children')}</h2>
+        {children.length > 0 ? (
+          <div className={styles.childrenGrid}>
+            {children.map(child => (
+              <Link
+                key={child.id}
+                to={`/manage/children/${child.id}`}
+                className={styles.childCard}
+              >
+                <Avatar emoji={child.avatarEmoji} size="lg" />
+                <span className={styles.childName}>{child.displayName}</span>
+                <span className={styles.childBalance}>{formatCurrency(child.balance)}</span>
+                <span className={styles.childSavings}>
+                  {t('kid.savings')}: {formatCurrency(child.totalSavings)}
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            emoji="👶"
+            title={t('common.noData')}
+            action={
+              <Link to="/manage/children">
+                <Button>{t('parent.addChild')}</Button>
+              </Link>
+            }
+          />
+        )}
       </div>
-
-      {children.length === 0 && (
-        <EmptyState
-          emoji="👶"
-          title={t('common.noData')}
-          action={
-            <Link to="/manage/children">
-              <Button>{t('parent.addChild')}</Button>
-            </Link>
-          }
-        />
-      )}
     </div>
   )
 }
