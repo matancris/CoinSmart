@@ -86,7 +86,7 @@ export async function loginChildWithPin(
     )
   )
 
-  const matchingChild = childrenSnap.docs.find(d => d.data().pin === pin)
+  const matchingChild = childrenSnap.docs.find(d => String(d.data().pin) === String(pin))
   if (!matchingChild) {
     throw new Error('errors.invalidPin')
   }

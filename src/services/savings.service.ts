@@ -48,7 +48,12 @@ export async function createSavingsGoal(
     lastInterestAt: now,
   }
 
-  await setDoc(ref, goal)
+  // Firestore throws on undefined values — strip them before writing
+  const cleanGoal = Object.fromEntries(
+    Object.entries(goal).filter(([, v]) => v !== undefined)
+  )
+
+  await setDoc(ref, cleanGoal)
   return goal
 }
 

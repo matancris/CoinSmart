@@ -20,6 +20,10 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       // Parents can create child docs in their family
       allow create: if isAuthenticated() && isParent();
+      // Allow anonymous login stamp: any authenticated user can set lastAuthUid on a child
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAuthUid'])
+        && resource.data.role == 'child';
       // Parents can update users in their family
       allow update: if isAuthenticated() && isParentInSameFamily(userId);
       // A user can update their own doc (parent or child with matching lastAuthUid)
