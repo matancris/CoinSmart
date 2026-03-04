@@ -63,16 +63,30 @@ export async function getChildrenByFamily(familyId: string): Promise<AppUser[]> 
 }
 
 export async function updateUser(userId: string, updates: Partial<AppUser>): Promise<void> {
-  await updateDoc(doc(db, 'users', userId), updates as Record<string, unknown>)
+  await updateDoc(doc(db, 'users', userId), updates as Record<string, string | number | boolean | Date | undefined>)
 }
 
 export async function updateChildPin(familyId: string, childId: string, newPin: string): Promise<void> {
   const salt = generateSalt()
   const pinHash = await hashPin(newPin, salt)
-  await updateDoc(doc(db, 'families', familyId, 'loginProfiles', childId), {
-    pinHash,
-    pinSalt: salt,
-  })
+
+  const profileRef = doc(db, 'families', familyId, 'loginProfiles', childId)
+  const profileSnap = await getDoc(profileRef)
+
+  if (profileSnap.exists()) {
+    await updateDoc(profileRef, { pinHash, pinSalt: salt })
+  } else {
+    // Migrate: create full loginProfile for pre-existing children
+    const user = await getUser(childId)
+    const profile: LoginProfile = {
+      userId: childId,
+      displayName: user.displayName,
+      avatarEmoji: user.avatarEmoji,
+      pinHash,
+      pinSalt: salt,
+    }
+    await setDoc(profileRef, profile)
+  }
 }
 
 export async function setBalance(userId: string, newBalance: number): Promise<void> {

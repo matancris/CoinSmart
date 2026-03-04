@@ -19,7 +19,10 @@ service cloud.firestore {
 
     // User documents — restricted to family members only
     match /users/{userId} {
-      allow read: if isAuthenticated() && canAccessUser(userId);
+      // Single-doc read: owner, parent in same family, or child with matching lastAuthUid
+      allow get: if isAuthenticated() && canAccessUser(userId);
+      // Collection query: parent can list users in their own family
+      allow list: if isAuthenticated() && isParentReadingOwnFamily();
 
       // A user can create their own doc (registration)
       allow create: if isAuthenticated() && request.auth.uid == userId;
@@ -80,6 +83,12 @@ service cloud.firestore {
       let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
       let target = get(/databases/$(database)/documents/users/$(targetUserId));
       return requester.data.role == 'parent' && requester.data.familyId == target.data.familyId;
+    }
+
+    function isParentReadingOwnFamily() {
+      let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return requester.data.role == 'parent'
+        && resource.data.familyId == requester.data.familyId;
     }
 
     function canAccessUser(targetUserId) {
