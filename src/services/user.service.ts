@@ -1,10 +1,12 @@
 import {
-  doc, setDoc, getDoc, getDocs, updateDoc,
+  doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
   collection, query, where,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
-import type { AppUser } from '@/types'
+import type { AppUser, LoginProfile } from '@/types'
 import { toDate } from '@/utils/date'
+import { sanitizeString } from '@/utils/validation'
+import { generateSalt, hashPin } from '@/utils/crypto'
 
 export async function createChild(data: {
   familyId: string
@@ -19,16 +21,28 @@ export async function createChild(data: {
     id,
     familyId: data.familyId,
     role: 'child',
-    displayName: data.displayName,
+    displayName: sanitizeString(data.displayName, 50),
     avatarEmoji: data.avatarEmoji,
-    pin: data.pin,
     balance: data.initialBalance,
     totalSavings: 0,
     isActive: true,
     createdAt: new Date(),
   }
 
+  const salt = generateSalt()
+  const pinHash = await hashPin(data.pin, salt)
+
+  const loginProfile: LoginProfile = {
+    userId: id,
+    displayName: child.displayName,
+    avatarEmoji: child.avatarEmoji,
+    pinHash,
+    pinSalt: salt,
+  }
+
   await setDoc(doc(db, 'users', id), child)
+  await setDoc(doc(db, 'families', data.familyId, 'loginProfiles', id), loginProfile)
+
   return child
 }
 
@@ -52,12 +66,22 @@ export async function updateUser(userId: string, updates: Partial<AppUser>): Pro
   await updateDoc(doc(db, 'users', userId), updates as Record<string, unknown>)
 }
 
+export async function updateChildPin(familyId: string, childId: string, newPin: string): Promise<void> {
+  const salt = generateSalt()
+  const pinHash = await hashPin(newPin, salt)
+  await updateDoc(doc(db, 'families', familyId, 'loginProfiles', childId), {
+    pinHash,
+    pinSalt: salt,
+  })
+}
+
 export async function setBalance(userId: string, newBalance: number): Promise<void> {
   await updateDoc(doc(db, 'users', userId), { balance: newBalance })
 }
 
-export async function removeChild(userId: string): Promise<void> {
+export async function removeChild(userId: string, familyId: string): Promise<void> {
   await updateDoc(doc(db, 'users', userId), { isActive: false })
+  await deleteDoc(doc(db, 'families', familyId, 'loginProfiles', userId))
 }
 
 function parseUser(id: string, data: Record<string, unknown>): AppUser {
@@ -68,7 +92,6 @@ function parseUser(id: string, data: Record<string, unknown>): AppUser {
     displayName: data.displayName as string,
     avatarEmoji: (data.avatarEmoji as string) ?? '😊',
     email: data.email as string | undefined,
-    pin: data.pin as string | undefined,
     balance: (data.balance as number) ?? 0,
     totalSavings: (data.totalSavings as number) ?? 0,
     isActive: (data.isActive as boolean) ?? true,

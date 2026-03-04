@@ -17,3 +17,11 @@ export function isPositiveAmount(amount: number): boolean {
 export function isValidPassword(password: string): boolean {
   return password.length >= 6
 }
+
+export function sanitizeString(value: string, maxLength = 200): string {
+  return value.trim().slice(0, maxLength)
+}
+
+export function isValidAmount(amount: number): boolean {
+  return isPositiveAmount(amount) && amount <= 1_000_000
+}

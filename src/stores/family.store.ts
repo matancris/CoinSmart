@@ -5,6 +5,10 @@ import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
 
+interface ChildUpdates extends Partial<AppUser> {
+  pin?: string
+}
+
 interface FamilyState {
   children: AppUser[]
   isLoading: boolean
@@ -17,7 +21,7 @@ interface FamilyState {
       pin: string
       initialBalance: number
     }) => Promise<boolean>
-    updateChild: (childId: string, updates: Partial<AppUser>) => Promise<boolean>
+    updateChild: (childId: string, updates: ChildUpdates) => Promise<boolean>
     removeChild: (childId: string) => Promise<boolean>
   }
 }
@@ -52,10 +56,22 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
 
     updateChild: async (childId, updates) => {
       try {
-        await userService.updateUser(childId, updates)
+        const child = get().children.find(c => c.id === childId)
+        if (!child) throw new Error('Child not found')
+
+        // Route PIN updates to loginProfile
+        const { pin, ...userUpdates } = updates
+        if (pin) {
+          await userService.updateChildPin(child.familyId, childId, pin)
+        }
+
+        if (Object.keys(userUpdates).length > 0) {
+          await userService.updateUser(childId, userUpdates)
+        }
+
         set({
           children: get().children.map(c =>
-            c.id === childId ? { ...c, ...updates } : c
+            c.id === childId ? { ...c, ...userUpdates } : c
           ),
         })
         toast(i18n.t('common.success'), 'success')
@@ -69,7 +85,10 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
 
     removeChild: async (childId) => {
       try {
-        await userService.removeChild(childId)
+        const child = get().children.find(c => c.id === childId)
+        if (!child) throw new Error('Child not found')
+
+        await userService.removeChild(childId, child.familyId)
         set({ children: get().children.filter(c => c.id !== childId) })
         toast(i18n.t('common.success'), 'success')
         return true

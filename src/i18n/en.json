@@ -74,6 +74,8 @@
     "avatar": "Avatar",
     "initialBalance": "Initial Balance",
     "resetPin": "Reset PIN",
+    "newPin": "New PIN",
+    "pinResetSuccess": "PIN updated successfully",
     "shareCode": "Share Code",
     "linkCopied": "Link copied",
     "newGoal": "New Goal",

@@ -5,6 +5,7 @@ import {
 import { db } from '@/config/firebase'
 import type { SavingsGoal, SavingsType } from '@/types'
 import { toDate } from '@/utils/date'
+import { sanitizeString } from '@/utils/validation'
 import { SAVINGS_PLANS } from '@/utils/savings'
 
 export async function getSavingsGoals(userId: string): Promise<SavingsGoal[]> {
@@ -36,7 +37,7 @@ export async function createSavingsGoal(
 
   const goal: SavingsGoal = {
     id: ref.id,
-    name: data.name,
+    name: sanitizeString(data.name, 100),
     targetAmount: data.targetAmount,
     currentAmount: 0,
     interestRate: plan.annualRate,
@@ -259,11 +260,50 @@ export async function deleteSavingsGoal(
     }
   }
 
-  const currentAmount = (savingsSnap.data().currentAmount as number) ?? 0
+  let currentAmount = (savingsSnap.data().currentAmount as number) ?? 0
+  const interestRate = (savingsSnap.data().interestRate as number) ?? 0
   const balance = (userSnap.data().balance as number) ?? 0
-  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+  let totalSavings = (userSnap.data().totalSavings as number) ?? 0
 
+  const now = new Date()
   const batch = writeBatch(db)
+
+  // Credit pro-rata interest for partial month before closing
+  if (interestRate > 0 && currentAmount > 0) {
+    const lastInterestAt = savingsSnap.data().lastInterestAt
+      ? toDate(savingsSnap.data().lastInterestAt)
+      : savingsSnap.data().createdAt
+        ? toDate(savingsSnap.data().createdAt)
+        : now
+    const daysElapsed = Math.floor(
+      (now.getTime() - lastInterestAt.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+
+    if (daysElapsed > 0) {
+      const proRataInterest = Math.round(
+        currentAmount * (interestRate / 12) * (daysElapsed / daysInMonth) * 100
+      ) / 100
+
+      if (proRataInterest > 0) {
+        currentAmount += proRataInterest
+        totalSavings += proRataInterest
+
+        const interestTxRef = doc(collection(db, 'users', userId, 'transactions'))
+        batch.set(interestTxRef, {
+          id: interestTxRef.id,
+          type: 'interest',
+          amount: proRataInterest,
+          balanceAfter: balance,
+          description: savingsSnap.data().name,
+          savingsId,
+          createdAt: now,
+          createdBy: 'system',
+        })
+      }
+    }
+  }
+
   batch.delete(savingsRef)
   batch.update(userRef, {
     balance: balance + currentAmount,

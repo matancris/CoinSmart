@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
 import { Button, Input, Avatar, Spinner, EmptyState, Modal } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS } from '@/utils'
+import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin } from '@/utils'
 import { transactionService } from '@/services'
 import type { AppUser, TransactionType, SavingsType } from '@/types'
 import styles from './ChildDetail.module.scss'
@@ -27,6 +27,7 @@ export function ChildDetail() {
   const navigate = useNavigate()
   const appUser = useAuthStore(s => s.appUser)
   const children = useFamilyStore(s => s.children)
+  const familyActions = useFamilyStore(s => s.actions)
   const { balance, transactions, savingsGoals, isLoading, hasMore } = useWalletStore(s => s)
   const walletActions = useWalletStore(s => s.actions)
 
@@ -49,6 +50,10 @@ export function ChildDetail() {
 
   const [showSetBalance, setShowSetBalance] = useState(false)
   const [newBalance, setNewBalance] = useState('')
+
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [newPin, setNewPin] = useState('')
+  const [pinError, setPinError] = useState('')
 
   useEffect(() => {
     const found = children.find(c => c.id === id)
@@ -150,6 +155,25 @@ export function ChildDetail() {
     }
   }, [child, newBalance, walletActions])
 
+  const handleResetPin = useCallback(async () => {
+    if (!child) return
+    if (!isValidPin(newPin)) {
+      setPinError(t('errors.invalidPin'))
+      return
+    }
+
+    setSubmitting(true)
+    const success = await familyActions.updateChild(child.id, { pin: newPin })
+    setSubmitting(false)
+
+    if (success) {
+      setShowPinModal(false)
+      setNewPin('')
+      setPinError('')
+      toast(t('parent.pinResetSuccess'), 'success')
+    }
+  }, [child, newPin, familyActions, t])
+
   const handleDeleteGoal = useCallback(async (goalId: string) => {
     if (!child || !confirm(t('common.confirmDelete'))) return
     await walletActions.deleteSavingsGoal(child.id, goalId, true)
@@ -163,23 +187,32 @@ export function ChildDetail() {
         ← {t('common.back')}
       </button>
 
-      <div className={styles.profileHeader}>
-        <Avatar emoji={child.avatarEmoji} size="xl" />
-        <div className={styles.profileInfo}>
-          <h1 className={styles.profileName}>{child.displayName}</h1>
-          <span className={styles.profileBalance}>
-            {formatCurrency(balance)}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setNewBalance(String(balance)); setShowSetBalance(true) }}
-            >
-              {t('parent.setBalance')}
-            </Button>
-          </span>
-          <span className={styles.profileSavings}>
-            {t('kid.savings')}: {formatCurrency(child.totalSavings)}
-          </span>
+      <div className={styles.profileCard}>
+        <div className={styles.profileHeader}>
+          <Avatar emoji={child.avatarEmoji} size="xl" />
+          <div className={styles.profileInfo}>
+            <h1 className={styles.profileName}>{child.displayName}</h1>
+            <span className={styles.profileBalance}>{formatCurrency(balance)}</span>
+            <span className={styles.profileSavings}>
+              {t('kid.savings')}: {formatCurrency(child.totalSavings)}
+            </span>
+          </div>
+        </div>
+        <div className={styles.profileActions}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { setNewBalance(String(balance)); setShowSetBalance(true) }}
+          >
+            {t('parent.setBalance')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { setNewPin(''); setPinError(''); setShowPinModal(true) }}
+          >
+            {t('parent.resetPin')}
+          </Button>
         </div>
       </div>
 
@@ -504,6 +537,33 @@ export function ChildDetail() {
           value={newBalance}
           onChange={e => setNewBalance(e.target.value)}
           min="0"
+          dir="ltr"
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        title={t('parent.resetPin')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowPinModal(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleResetPin} disabled={submitting || !newPin}>
+              {submitting ? t('common.loading') : t('common.confirm')}
+            </Button>
+          </>
+        }
+      >
+        <Input
+          label={t('parent.newPin')}
+          type="tel"
+          inputMode="numeric"
+          maxLength={4}
+          value={newPin}
+          onChange={e => { setNewPin(e.target.value.replace(/\D/g, '')); setPinError('') }}
+          error={pinError}
           dir="ltr"
         />
       </Modal>

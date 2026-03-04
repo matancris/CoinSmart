@@ -12,9 +12,12 @@ const CHILD_SESSION_KEY = 'coinsmart_child_session'
 let unsubscribeAuth: (() => void) | null = null
 let suppressAuthListener = false
 
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+
 interface ChildSession {
   childId: string
   familyId: string
+  expiresAt: number
 }
 
 interface AuthState {
@@ -34,7 +37,8 @@ interface AuthState {
 }
 
 function saveChildSession(childId: string, familyId: string, familyCode: string) {
-  localStorage.setItem(CHILD_SESSION_KEY, JSON.stringify({ childId, familyId }))
+  const expiresAt = Date.now() + SESSION_MAX_AGE_MS
+  localStorage.setItem(CHILD_SESSION_KEY, JSON.stringify({ childId, familyId, expiresAt }))
   localStorage.setItem(FAMILY_CODE_KEY, familyCode.toUpperCase())
 }
 
@@ -46,7 +50,12 @@ function getChildSession(): ChildSession | null {
   const raw = localStorage.getItem(CHILD_SESSION_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as ChildSession
+    const session = JSON.parse(raw) as ChildSession
+    if (session.expiresAt && Date.now() > session.expiresAt) {
+      clearChildSession()
+      return null
+    }
+    return session
   } catch {
     return null
   }

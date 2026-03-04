@@ -8,8 +8,10 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/config/firebase'
-import type { AppUser, Family } from '@/types'
+import type { AppUser, Family, LoginProfile } from '@/types'
 import { toDate } from '@/utils/date'
+import { sanitizeString } from '@/utils/validation'
+import { hashPin } from '@/utils/crypto'
 
 export function onAuthChange(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback)
@@ -26,7 +28,7 @@ export async function registerParent(
 
   const family: Family = {
     id: cred.user.uid + '_family',
-    name: familyName,
+    name: sanitizeString(familyName, 100),
     code: familyCode,
     createdBy: cred.user.uid,
     currency: 'ILS',
@@ -38,7 +40,7 @@ export async function registerParent(
     id: cred.user.uid,
     familyId: family.id,
     role: 'parent',
-    displayName,
+    displayName: sanitizeString(displayName, 50),
     avatarEmoji: '👨‍👩‍👧‍👦',
     email,
     balance: 0,
@@ -77,24 +79,29 @@ export async function loginChildWithPin(
 
   const family = { id: familySnap.docs[0].id, ...familySnap.docs[0].data() } as Family
 
-  const childrenSnap = await getDocs(
-    query(
-      collection(db, 'users'),
-      where('familyId', '==', family.id),
-      where('role', '==', 'child'),
-      where('isActive', '==', true)
-    )
+  // Query login profiles instead of user docs
+  const profilesSnap = await getDocs(
+    collection(db, 'families', family.id, 'loginProfiles')
   )
 
-  const matchingChild = childrenSnap.docs.find(d => String(d.data().pin) === String(pin))
-  if (!matchingChild) {
+  let matchedProfile: LoginProfile | null = null
+  for (const profileDoc of profilesSnap.docs) {
+    const profile = profileDoc.data() as LoginProfile
+    const inputHash = await hashPin(pin, profile.pinSalt)
+    if (inputHash === profile.pinHash) {
+      matchedProfile = profile
+      break
+    }
+  }
+
+  if (!matchedProfile) {
     throw new Error('errors.invalidPin')
   }
 
-  const appUser = parseAppUser(matchingChild.id, matchingChild.data())
-
   // Stamp child doc with anonymous UID so Firestore rules can verify access
-  await updateDoc(doc(db, 'users', appUser.id), { lastAuthUid: auth.currentUser!.uid })
+  await updateDoc(doc(db, 'users', matchedProfile.userId), { lastAuthUid: auth.currentUser!.uid })
+
+  const appUser = await fetchAppUser(matchedProfile.userId)
 
   return { appUser, family }
 }
@@ -152,7 +159,6 @@ function parseAppUser(id: string, data: Record<string, unknown>): AppUser {
     displayName: data.displayName as string,
     avatarEmoji: (data.avatarEmoji as string) ?? '😊',
     email: data.email as string | undefined,
-    pin: data.pin as string | undefined,
     balance: (data.balance as number) ?? 0,
     totalSavings: (data.totalSavings as number) ?? 0,
     isActive: (data.isActive as boolean) ?? true,

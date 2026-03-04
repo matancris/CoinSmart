@@ -24,37 +24,54 @@
   }
 }
 
-.profileHeader {
-  @include flex-row(4);
+.profileCard {
+  @include card;
+  @include flex-col(4);
+  padding: space(5);
 
   @include respond-below(sm) {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    padding: space(4);
   }
 
-  .profileInfo {
-    @include flex-col(1);
-    min-width: 0;
+  .profileHeader {
+    @include flex-row(4);
 
-    .profileName {
-      @include heading($text-2xl);
+    @include respond-below(sm) {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
-      @include respond-below(sm) {
-        font-size: $text-xl;
+    .profileInfo {
+      @include flex-col(1);
+      min-width: 0;
+
+      .profileName {
+        @include heading($text-2xl);
+
+        @include respond-below(sm) {
+          font-size: $text-xl;
+        }
+      }
+
+      .profileBalance {
+        @include text($text-xl, $font-bold, $clr-primary);
+      }
+
+      .profileSavings {
+        @include text($text-sm, $font-regular, $clr-text-secondary);
       }
     }
+  }
 
-    .profileBalance {
-      @include text($text-xl, $font-bold, $clr-primary);
-      display: flex;
-      align-items: center;
-      gap: space(2);
-      flex-wrap: wrap;
-    }
+  .profileActions {
+    @include flex-row(2);
+    flex-wrap: wrap;
+    border-block-start: 1px solid $clr-border;
+    padding-block-start: space(4);
 
-    .profileSavings {
-      @include text($text-sm, $font-regular, $clr-text-secondary);
+    @include respond-below(sm) {
+      justify-content: center;
     }
   }
 }

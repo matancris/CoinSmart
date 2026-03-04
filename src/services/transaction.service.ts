@@ -6,6 +6,7 @@ import {
 import { db } from '@/config/firebase'
 import type { Transaction, TransactionType } from '@/types'
 import { toDate } from '@/utils/date'
+import { sanitizeString } from '@/utils/validation'
 
 export async function getTransactions(
   userId: string,
@@ -55,11 +56,11 @@ export async function createTransaction(
     type: data.type,
     amount: data.amount,
     balanceAfter: newBalance,
-    description: data.description,
+    description: sanitizeString(data.description, 200),
     createdAt: new Date(),
     createdBy: data.createdBy,
-    ...(data.itemName != null && { itemName: data.itemName }),
-    ...(data.note != null && { note: data.note }),
+    ...(data.itemName != null && { itemName: sanitizeString(data.itemName, 100) }),
+    ...(data.note != null && { note: sanitizeString(data.note, 500) }),
   }
 
   batch.set(txRef, transaction)
@@ -72,11 +73,13 @@ export async function createTransaction(
 export async function updateTransaction(
   userId: string,
   transactionId: string,
-  updates: { description?: string; note?: string; amount?: number; editedBy: string }
+  updates: { description?: string; note?: string; editedBy: string }
 ): Promise<void> {
   const txRef = doc(db, 'users', userId, 'transactions', transactionId)
   await updateDoc(txRef, {
-    ...updates,
+    ...(updates.description != null && { description: sanitizeString(updates.description, 200) }),
+    ...(updates.note != null && { note: sanitizeString(updates.note, 500) }),
+    editedBy: updates.editedBy,
     editedAt: new Date(),
   })
 }

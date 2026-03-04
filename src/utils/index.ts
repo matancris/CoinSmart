@@ -1,5 +1,6 @@
 export { formatCurrency, parseCurrencyInput } from './currency'
 export { formatDate, formatTime, formatDateTime, toDate } from './date'
-export { isValidEmail, isValidPin, isValidFamilyCode, isPositiveAmount, isValidPassword } from './validation'
+export { isValidEmail, isValidPin, isValidFamilyCode, isPositiveAmount, isValidPassword, sanitizeString, isValidAmount } from './validation'
 export { AppError, normalizeError, handleError, getFirebaseErrorMessage } from './error'
 export { SAVINGS_PLANS, isGoalLocked } from './savings'
+export { generateSalt, hashPin } from './crypto'

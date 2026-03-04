@@ -74,6 +74,8 @@
     "avatar": "אווטאר",
     "initialBalance": "יתרה התחלתית",
     "resetPin": "אפס קוד PIN",
+    "newPin": "קוד PIN חדש",
+    "pinResetSuccess": "קוד PIN עודכן בהצלחה",
     "shareCode": "שתפו קוד",
     "linkCopied": "הקישור הועתק",
     "newGoal": "יעד חדש",

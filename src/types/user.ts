@@ -7,7 +7,6 @@ export interface AppUser {
   displayName: string
   avatarEmoji: string
   email?: string
-  pin?: string
   balance: number
   totalSavings: number
   isActive: boolean

@@ -4,42 +4,61 @@ service cloud.firestore {
 
     // Family documents
     match /families/{familyId} {
-      // Anyone authenticated can read families (needed for child login by code)
+      // Any authenticated user can read families (needed for child login by code).
       allow read: if isAuthenticated();
-      // Any authenticated user can create a family (registration)
       allow create: if isAuthenticated();
-      // Only the family's parent can update
       allow update: if isAuthenticated() && isFamilyParent(familyId);
+
+      // Login profiles — readable by any auth user (needed for child login),
+      // writable only by the family's parent
+      match /loginProfiles/{profileId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isAuthenticated() && isFamilyParent(familyId);
+      }
     }
 
-    // User documents
+    // User documents — restricted to family members only
     match /users/{userId} {
-      // Anyone authenticated can read users (needed for child login flow)
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && canAccessUser(userId);
+
       // A user can create their own doc (registration)
       allow create: if isAuthenticated() && request.auth.uid == userId;
       // Parents can create child docs in their family
       allow create: if isAuthenticated() && isParent();
-      // Allow anonymous login stamp: any authenticated user can set lastAuthUid on a child
+
+      // Allow anonymous login stamp: only anonymous users can set lastAuthUid on a child.
+      // TODO: Move to Cloud Function for proper PIN verification server-side.
       allow update: if isAuthenticated()
+        && request.auth.token.firebase.sign_in_provider == 'anonymous'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAuthUid'])
         && resource.data.role == 'child';
+
       // Parents can update users in their family
       allow update: if isAuthenticated() && isParentInSameFamily(userId);
       // A user can update their own doc (parent or child with matching lastAuthUid)
       allow update: if isAuthenticated() && canAccessUser(userId);
 
-      // Transactions subcollection
+      // Transactions subcollection — restricted to owner/parent, validated writes
       match /transactions/{txId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && canAccessUser(userId);
-        allow update, delete: if isAuthenticated() && isParentInSameFamily(userId);
+        allow read: if isAuthenticated() && canAccessUser(userId);
+        allow create: if isAuthenticated() && canAccessUser(userId)
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0;
+        // Parents can update description/note but NOT amount (prevents balance drift)
+        allow update: if isAuthenticated() && isParentInSameFamily(userId)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['amount', 'balanceAfter', 'type', 'createdAt']);
+        allow delete: if isAuthenticated() && isParentInSameFamily(userId);
       }
 
-      // Savings subcollection
+      // Savings subcollection — restricted to owner/parent, validated writes
       match /savings/{savingsId} {
-        allow read: if isAuthenticated();
-        allow create, update: if isAuthenticated() && canAccessUser(userId);
+        allow read: if isAuthenticated() && canAccessUser(userId);
+        allow create: if isAuthenticated() && canAccessUser(userId)
+          && request.resource.data.currentAmount is number
+          && request.resource.data.currentAmount >= 0;
+        allow update: if isAuthenticated() && canAccessUser(userId)
+          && request.resource.data.currentAmount is number
+          && request.resource.data.currentAmount >= 0;
         allow delete: if isAuthenticated() && canAccessUser(userId);
       }
     }
