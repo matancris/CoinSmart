@@ -1,0 +1,135 @@
+@use '@/styles' as *;
+
+.page {
+  @include kid-page;
+  @include flex-col(5);
+  animation: slideUp $transition-slow;
+}
+
+.balanceCard {
+  @include card($radius-kid);
+  @include flex-col(3);
+  align-items: center;
+  padding: space(8) space(6);
+  background: linear-gradient(135deg, $clr-primary, $clr-primary-dark);
+  color: $clr-text-inverse;
+
+  .balanceLabel {
+    @include text($text-base, $font-medium, rgba(255, 255, 255, 0.85));
+  }
+
+  .balanceAmount {
+    font-size: $text-kid-balance;
+    font-weight: $font-extrabold;
+    line-height: 1.1;
+  }
+
+  &:hover {
+    box-shadow: $shadow-lg;
+  }
+}
+
+.section {
+  @include flex-col(3);
+
+  .sectionHeader {
+    @include flex-between;
+
+    .sectionTitle {
+      @include heading($text-lg);
+    }
+
+    .sectionLink {
+      @include text($text-sm, $font-medium, $clr-primary);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.savingsBar {
+  @include card($radius-kid);
+  @include flex-row(4);
+  padding: space(4);
+
+  .savingsIcon {
+    font-size: $text-2xl;
+  }
+
+  .savingsInfo {
+    @include flex-col(1);
+    flex: 1;
+
+    .savingsLabel {
+      @include text($text-sm, $font-medium, $clr-text-secondary);
+    }
+
+    .savingsAmount {
+      @include text($text-lg, $font-bold, $clr-kid-savings);
+    }
+  }
+
+  .goalsCount {
+    @include text($text-sm, $font-medium, $clr-text-tertiary);
+  }
+}
+
+.txList {
+  @include flex-col(2);
+}
+
+.txRow {
+  @include flex-between;
+  padding: space(3) 0;
+  border-block-end: 1px solid $clr-border-light;
+
+  &:last-child {
+    border-block-end: none;
+  }
+
+  .txInfo {
+    @include flex-row(3);
+
+    .txIcon {
+      @include flex-center;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: $radius-full;
+      font-size: $text-sm;
+    }
+
+    .txDetails {
+      @include flex-col(0);
+
+      .txDesc {
+        @include text($text-sm, $font-medium, $clr-text-primary);
+      }
+
+      .txDate {
+        @include text($text-xs, $font-regular, $clr-text-tertiary);
+      }
+    }
+  }
+
+  .txAmount {
+    @include text($text-sm, $font-bold);
+
+    &.positive {
+      color: $clr-kid-deposit;
+    }
+
+    &.negative {
+      color: $clr-kid-expense;
+    }
+  }
+}
+
+@each $type, $color in $transaction-colors {
+  .txType-#{$type} {
+    background: rgba($color, 0.12);
+    color: $color;
+  }
+}

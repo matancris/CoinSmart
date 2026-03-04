@@ -1,0 +1,38 @@
+@use '@/styles' as *;
+
+.card {
+  @include card;
+  padding: space(5);
+
+  &.flat {
+    @include card-flat;
+    box-shadow: none;
+
+    &:hover {
+      box-shadow: none;
+    }
+  }
+
+  &.kid {
+    border-radius: $radius-kid;
+  }
+
+  &.noHover {
+    &:hover {
+      box-shadow: $shadow-card;
+    }
+  }
+}
+
+.header {
+  @include flex-between;
+  padding-block-end: space(4);
+  margin-block-end: space(4);
+  border-block-end: 1px solid $clr-border-light;
+}
+
+.footer {
+  padding-block-start: space(4);
+  margin-block-start: space(4);
+  border-block-start: 1px solid $clr-border-light;
+}

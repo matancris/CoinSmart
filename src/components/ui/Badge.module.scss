@@ -1,0 +1,25 @@
+@use '@/styles' as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: space(1) space(2);
+  font-size: $text-xs;
+  font-weight: $font-semibold;
+  border-radius: $radius-full;
+  white-space: nowrap;
+
+  @each $name, $color in $colors {
+    &.#{$name} {
+      background: rgba($color, 0.12);
+      color: $color;
+    }
+  }
+
+  @each $type, $color in $transaction-colors {
+    &.tx-#{$type} {
+      background: rgba($color, 0.12);
+      color: $color;
+    }
+  }
+}

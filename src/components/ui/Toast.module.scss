@@ -1,0 +1,60 @@
+@use '@/styles' as *;
+
+.container {
+  position: fixed;
+  top: space(4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: z(toast);
+  @include flex-col(2);
+  align-items: center;
+  pointer-events: none;
+}
+
+.toast {
+  @include flex-row(3);
+  padding: space(3) space(5);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-lg;
+  animation: slideUp $transition-spring;
+  pointer-events: auto;
+  min-width: rem(200);
+  max-width: rem(400);
+
+  .message {
+    @include text($text-sm, $font-medium);
+    flex: 1;
+  }
+
+  .closeBtn {
+    @include interactive;
+    color: inherit;
+    opacity: 0.6;
+    font-size: $text-lg;
+    line-height: 1;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &.success {
+    background: $clr-success;
+    color: $clr-text-inverse;
+  }
+
+  &.error {
+    background: $clr-danger;
+    color: $clr-text-inverse;
+  }
+
+  &.info {
+    background: $clr-primary;
+    color: $clr-text-inverse;
+  }
+
+  &.warning {
+    background: $clr-warning;
+    color: $clr-text-primary;
+  }
+}

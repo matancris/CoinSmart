@@ -1,0 +1,37 @@
+@use '@/styles' as *;
+
+.wrapper {
+  @include flex-col(1);
+
+  .label {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+  }
+
+  .select {
+    width: 100%;
+    padding: space(2) space(3);
+    padding-inline-end: space(8);
+    font-size: $text-base;
+    font-family: inherit;
+    color: $clr-text-primary;
+    background: $clr-surface;
+    border: 1px solid $clr-border;
+    border-radius: $radius-md;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left space(3) center;
+    transition: border-color $transition-base;
+    cursor: pointer;
+
+    [dir='ltr'] & {
+      background-position: right space(3) center;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $clr-primary;
+      box-shadow: 0 0 0 3px rgba($clr-primary, 0.1);
+    }
+  }
+}

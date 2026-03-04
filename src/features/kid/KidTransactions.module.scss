@@ -1,0 +1,77 @@
+@use '@/styles' as *;
+
+.page {
+  @include kid-page;
+  @include flex-col(4);
+  animation: slideUp $transition-slow;
+}
+
+.title {
+  @include heading($text-xl);
+}
+
+.list {
+  @include flex-col(2);
+}
+
+.txRow {
+  @include card($radius-kid);
+  @include flex-between;
+  padding: space(3) space(4);
+
+  .txInfo {
+    @include flex-row(3);
+
+    .txIcon {
+      @include flex-center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: $radius-full;
+      font-size: $text-base;
+    }
+
+    .txDetails {
+      @include flex-col(0);
+
+      .txDesc {
+        @include text($text-sm, $font-medium, $clr-text-primary);
+      }
+
+      .txMeta {
+        @include text($text-xs, $font-regular, $clr-text-tertiary);
+      }
+    }
+  }
+
+  .txRight {
+    @include flex-col(0);
+    align-items: flex-end;
+
+    .txAmount {
+      @include text($text-sm, $font-bold);
+
+      &.positive {
+        color: $clr-kid-deposit;
+      }
+
+      &.negative {
+        color: $clr-kid-expense;
+      }
+    }
+
+    .txBalance {
+      @include text($text-xs, $font-regular, $clr-text-tertiary);
+    }
+  }
+}
+
+@each $type, $color in $transaction-colors {
+  .txType-#{$type} {
+    background: rgba($color, 0.12);
+    color: $color;
+  }
+}
+
+.loadMore {
+  align-self: center;
+}

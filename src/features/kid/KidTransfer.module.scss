@@ -1,0 +1,66 @@
+@use '@/styles' as *;
+
+.page {
+  @include kid-page;
+  @include flex-col(5);
+  animation: slideUp $transition-slow;
+}
+
+.title {
+  @include heading($text-xl);
+}
+
+.modeSelector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: space(3);
+}
+
+.modeBtn {
+  @include interactive;
+  @include flex-col(2);
+  @include focus-ring;
+  align-items: center;
+  padding: space(5);
+  background: $clr-surface;
+  border: 2px solid $clr-border;
+  border-radius: $radius-kid;
+
+  .modeIcon {
+    font-size: 2.5rem;
+  }
+
+  .modeLabel {
+    @include text($text-sm, $font-semibold, $clr-text-primary);
+  }
+
+  &.active {
+    border-color: $clr-primary;
+    background: $clr-primary-lighter;
+  }
+
+  &:hover {
+    border-color: $clr-primary-light;
+  }
+}
+
+.form {
+  @include card($radius-kid);
+  @include flex-col(4);
+  padding: space(5);
+}
+
+.balanceInfo {
+  @include flex-between;
+  padding: space(3);
+  background: $clr-bg-tertiary;
+  border-radius: $radius-md;
+
+  .balanceLabel {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+  }
+
+  .balanceValue {
+    @include text($text-base, $font-bold, $clr-primary);
+  }
+}

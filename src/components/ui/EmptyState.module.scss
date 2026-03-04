@@ -1,0 +1,25 @@
+@use '@/styles' as *;
+
+.emptyState {
+  @include flex-col(3);
+  align-items: center;
+  padding: space(8) space(4);
+  text-align: center;
+
+  .emoji {
+    font-size: 3rem;
+  }
+
+  .title {
+    @include text($text-lg, $font-semibold, $clr-text-primary);
+  }
+
+  .description {
+    @include text($text-sm, $font-regular, $clr-text-tertiary);
+    max-width: 20rem;
+  }
+
+  .action {
+    margin-block-start: space(2);
+  }
+}

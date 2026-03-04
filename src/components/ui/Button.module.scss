@@ -1,0 +1,74 @@
+@use 'sass:color';
+@use '@/styles' as *;
+
+.button {
+  @include interactive;
+  @include focus-ring;
+  @include flex-center;
+  gap: space(2);
+  font-family: inherit;
+  font-weight: $font-semibold;
+  border: none;
+  border-radius: $radius-md;
+  transition: all $transition-base;
+  white-space: nowrap;
+
+  &.sm {
+    padding: space(1) space(3);
+    font-size: $text-sm;
+    border-radius: $radius-sm;
+  }
+
+  &.md {
+    padding: space(2) space(5);
+    font-size: $text-base;
+  }
+
+  &.lg {
+    padding: space(3) space(6);
+    font-size: $text-lg;
+    border-radius: $radius-lg;
+  }
+
+  &.primary {
+    background: $clr-primary;
+    color: $clr-text-inverse;
+
+    &:hover:not(:disabled) {
+      background: $clr-primary-dark;
+    }
+  }
+
+  &.secondary {
+    background: $clr-primary-lighter;
+    color: $clr-primary;
+
+    &:hover:not(:disabled) {
+      background: $clr-primary-light;
+      color: $clr-text-inverse;
+    }
+  }
+
+  &.danger {
+    background: $clr-danger;
+    color: $clr-text-inverse;
+
+    &:hover:not(:disabled) {
+      background: color.adjust($clr-danger, $lightness: -10%);
+    }
+  }
+
+  &.ghost {
+    background: transparent;
+    color: $clr-text-secondary;
+
+    &:hover:not(:disabled) {
+      background: $clr-bg-tertiary;
+      color: $clr-text-primary;
+    }
+  }
+
+  &.fullWidth {
+    width: 100%;
+  }
+}

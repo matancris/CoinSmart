@@ -1,0 +1,123 @@
+@use 'sass:map';
+@use 'variables' as vars;
+@use 'functions' as fn;
+
+$breakpoints: (sm: 480px, md: 768px, lg: 1024px, xl: 1280px);
+
+@mixin respond-to($bp) {
+  @media (min-width: map.get($breakpoints, $bp)) { @content; }
+}
+
+@mixin respond-below($bp) {
+  @media (max-width: map.get($breakpoints, $bp) - 1px) { @content; }
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-col($gap: 0) {
+  display: flex;
+  flex-direction: column;
+  @if $gap != 0 { gap: fn.space($gap); }
+}
+
+@mixin flex-row($gap: 0) {
+  display: flex;
+  align-items: center;
+  @if $gap != 0 { gap: fn.space($gap); }
+}
+
+@mixin text($size, $weight: 400, $color: vars.$clr-text-primary) {
+  font-size: $size;
+  font-weight: $weight;
+  color: $color;
+}
+
+@mixin heading($size) {
+  font-size: $size;
+  font-weight: vars.$font-bold;
+  color: vars.$clr-text-primary;
+  line-height: 1.25;
+}
+
+@mixin truncate($lines: 1) {
+  @if $lines == 1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@mixin card($radius: vars.$radius-lg) {
+  background: vars.$clr-surface;
+  border-radius: $radius;
+  box-shadow: vars.$shadow-card;
+  transition: box-shadow vars.$transition-base;
+
+  &:hover {
+    box-shadow: vars.$shadow-card-hover;
+  }
+}
+
+@mixin card-flat {
+  background: vars.$clr-surface;
+  border: 1px solid vars.$clr-border;
+  border-radius: vars.$radius-lg;
+}
+
+@mixin interactive {
+  cursor: pointer;
+  transition: all vars.$transition-base;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+@mixin focus-ring($color: vars.$clr-primary) {
+  &:focus-visible {
+    outline: 2px solid $color;
+    outline-offset: 2px;
+  }
+}
+
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: vars.$clr-border;
+    border-radius: 3px;
+  }
+}
+
+@mixin page-container($max-width: vars.$max-content-width) {
+  width: 100%;
+  max-width: $max-width;
+  margin-inline: auto;
+  padding: fn.space(6);
+}
+
+@mixin kid-page {
+  @include page-container(vars.$kid-max-width);
+  padding: fn.space(4);
+}

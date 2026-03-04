@@ -1,0 +1,63 @@
+@use '@/styles' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: z(modal-backdrop);
+  animation: fadeIn $transition-base;
+  padding: space(4);
+}
+
+.modal {
+  background: $clr-surface;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  width: 100%;
+  max-width: rem(480);
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: z(modal);
+  animation: scaleIn $transition-spring;
+
+  @include custom-scrollbar;
+}
+
+.header {
+  @include flex-between;
+  padding: space(5) space(6);
+  border-block-end: 1px solid $clr-border-light;
+
+  .title {
+    @include heading($text-xl);
+  }
+
+  .closeBtn {
+    @include interactive;
+    @include flex-center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: $radius-full;
+    font-size: $text-xl;
+    color: $clr-text-tertiary;
+
+    &:hover {
+      background: $clr-bg-tertiary;
+      color: $clr-text-primary;
+    }
+  }
+}
+
+.body {
+  padding: space(6);
+}
+
+.footer {
+  @include flex-row(3);
+  justify-content: flex-end;
+  padding: space(4) space(6);
+  border-block-start: 1px solid $clr-border-light;
+}

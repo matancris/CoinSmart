@@ -1,0 +1,43 @@
+@use '@/styles' as *;
+
+.steps {
+  @include flex-col(4);
+}
+
+.pinLabel {
+  @include text($text-lg, $font-medium, $clr-text-secondary);
+  text-align: center;
+}
+
+.pinInput {
+  @include flex-center;
+  gap: space(2);
+
+  input {
+    width: 3rem;
+    height: 3.5rem;
+    text-align: center;
+    font-size: $text-2xl;
+    font-weight: $font-bold;
+    border: 2px solid $clr-border;
+    border-radius: $radius-lg;
+    outline: none;
+    transition: border-color $transition-base;
+
+    &:focus {
+      border-color: $clr-primary;
+    }
+  }
+}
+
+.backLink {
+  @include interactive;
+  @include text($text-sm, $font-medium, $clr-primary);
+  background: none;
+  border: none;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

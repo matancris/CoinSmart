@@ -1,0 +1,85 @@
+@use '@/styles' as *;
+
+.page {
+  @include page-container;
+  @include flex-col(6);
+  animation: fadeIn $transition-slow;
+}
+
+.title {
+  @include heading($text-2xl);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(rem(200), 1fr));
+  gap: space(4);
+}
+
+.statCard {
+  @include card;
+  @include flex-col(2);
+  padding: space(5);
+
+  .statLabel {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+  }
+
+  .statValue {
+    @include heading($text-2xl);
+  }
+
+  .statIcon {
+    font-size: $text-2xl;
+  }
+}
+
+.familyCodeCard {
+  @include card;
+  @include flex-between;
+  padding: space(5);
+
+  .codeLabel {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+  }
+
+  .codeValue {
+    @include heading($text-2xl);
+    color: $clr-primary;
+    letter-spacing: 0.15em;
+    direction: ltr;
+  }
+
+  .shareBtn {
+    align-self: center;
+    white-space: nowrap;
+  }
+}
+
+.childrenGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(rem(220), 1fr));
+  gap: space(4);
+}
+
+.childCard {
+  @include card;
+  @include flex-col(3);
+  @include interactive;
+  padding: space(5);
+  text-decoration: none;
+  align-items: center;
+  text-align: center;
+
+  .childName {
+    @include text($text-base, $font-semibold, $clr-text-primary);
+  }
+
+  .childBalance {
+    @include text($text-lg, $font-bold, $clr-primary);
+  }
+
+  .childSavings {
+    @include text($text-sm, $font-regular, $clr-text-secondary);
+  }
+}

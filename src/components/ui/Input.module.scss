@@ -1,0 +1,43 @@
+@use '@/styles' as *;
+
+.wrapper {
+  @include flex-col(1);
+
+  .label {
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+  }
+
+  .input {
+    width: 100%;
+    padding: space(2) space(3);
+    font-size: $text-base;
+    font-family: inherit;
+    color: $clr-text-primary;
+    background: $clr-surface;
+    border: 1px solid $clr-border;
+    border-radius: $radius-md;
+    transition: border-color $transition-base, box-shadow $transition-base;
+    outline: none;
+
+    &::placeholder {
+      color: $clr-text-tertiary;
+    }
+
+    &:focus {
+      border-color: $clr-primary;
+      box-shadow: 0 0 0 3px rgba($clr-primary, 0.1);
+    }
+
+    &.error {
+      border-color: $clr-danger;
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba($clr-danger, 0.1);
+      }
+    }
+  }
+
+  .errorText {
+    @include text($text-xs, $font-regular, $clr-danger);
+  }
+}

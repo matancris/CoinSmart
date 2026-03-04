@@ -1,0 +1,78 @@
+@use '@/styles' as *;
+
+.layout {
+  @include flex-center;
+  min-height: 100vh;
+  background: $clr-bg-primary;
+  padding: space(4);
+}
+
+.container {
+  @include flex-col(6);
+  align-items: center;
+  width: 100%;
+  max-width: rem(400);
+  animation: slideUp $transition-slow;
+}
+
+.logo {
+  @include flex-col(2);
+  align-items: center;
+  text-align: center;
+
+  .emoji {
+    font-size: 3.5rem;
+  }
+
+  .title {
+    @include heading($text-3xl);
+    color: $clr-primary;
+  }
+
+  .tagline {
+    @include text($text-base, $font-regular, $clr-text-secondary);
+  }
+}
+
+.card {
+  @include card($radius-xl);
+  width: 100%;
+  padding: space(6);
+}
+
+.form {
+  @include flex-col(4);
+}
+
+.footer {
+  @include text($text-sm, $font-regular, $clr-text-secondary);
+  text-align: center;
+
+  a {
+    color: $clr-primary;
+    font-weight: $font-semibold;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.switchMode {
+  @include text($text-sm, $font-regular, $clr-text-secondary);
+  text-align: center;
+
+  .link {
+    @include interactive;
+    color: $clr-primary;
+    font-weight: $font-semibold;
+    background: none;
+    border: none;
+    font-size: inherit;
+    padding: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

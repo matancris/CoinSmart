@@ -1,0 +1,173 @@
+@use '@/styles' as *;
+
+.page {
+  @include kid-page;
+  @include flex-col(5);
+  animation: slideUp $transition-slow;
+}
+
+.header {
+  @include flex-between;
+
+  .title {
+    @include heading($text-xl);
+  }
+}
+
+.goalsList {
+  @include flex-col(3);
+}
+
+.goalCard {
+  @include card($radius-kid);
+  @include flex-col(3);
+  padding: space(4);
+
+  .goalHeader {
+    @include flex-between;
+
+    .goalName {
+      @include text($text-base, $font-semibold, $clr-text-primary);
+    }
+
+    .goalAmount {
+      @include text($text-sm, $font-bold, $clr-kid-savings);
+    }
+  }
+
+  .goalInterestInfo {
+    @include flex-row(2);
+    flex-wrap: wrap;
+
+    .interestBadge {
+      @include text($text-xs, $font-medium, $clr-kid-savings);
+      background: rgba($clr-kid-savings, 0.1);
+      padding: space(1) space(2);
+      border-radius: $radius-full;
+    }
+
+    .lockBadge {
+      @include text($text-xs, $font-medium, $clr-warning);
+      background: rgba($clr-warning, 0.1);
+      padding: space(1) space(2);
+      border-radius: $radius-full;
+    }
+
+    .interestEarned {
+      @include text($text-xs, $font-regular, $clr-text-secondary);
+    }
+  }
+
+  .progressBar {
+    width: 100%;
+    height: 0.5rem;
+    background: $clr-bg-tertiary;
+    border-radius: $radius-full;
+    overflow: hidden;
+
+    .progressFill {
+      height: 100%;
+      background: linear-gradient(90deg, $clr-primary, $clr-kid-savings);
+      border-radius: $radius-full;
+      transition: width $transition-slow;
+    }
+  }
+
+  .goalMeta {
+    @include flex-between;
+
+    .goalTarget {
+      @include text($text-xs, $font-regular, $clr-text-tertiary);
+    }
+
+    .goalPercent {
+      @include text($text-xs, $font-semibold, $clr-primary);
+    }
+  }
+
+  .goalActions {
+    @include flex-row(2);
+  }
+}
+
+.newGoalForm {
+  @include flex-col(4);
+
+  .toggleRow {
+    @include flex-between;
+    align-items: center;
+
+    .toggleLabel {
+      @include text($text-sm, $font-medium, $clr-text-primary);
+    }
+  }
+
+  .toggle {
+    position: relative;
+    width: 2.75rem;
+    height: 1.5rem;
+    background: $clr-bg-tertiary;
+    border: none;
+    border-radius: $radius-full;
+    padding: 0;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    .toggleKnob {
+      position: absolute;
+      top: 3px;
+      inset-inline-start: 3px;
+      width: 1.125rem;
+      height: 1.125rem;
+      background: white;
+      border-radius: $radius-full;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: inset-inline-start $transition-fast;
+    }
+
+    &.toggleActive {
+      background: $clr-primary;
+
+      .toggleKnob {
+        inset-inline-start: calc(100% - 1.125rem - 3px);
+      }
+    }
+  }
+}
+
+.planSelector {
+  @include flex-col(2);
+
+  .planLabel {
+    @include text($text-sm, $font-semibold, $clr-text-primary);
+  }
+
+  .planOption {
+    @include interactive;
+    @include flex-col(1);
+    padding: space(3) space(4);
+    background: $clr-bg-secondary;
+    border: 2px solid $clr-border;
+    border-radius: $radius-md;
+    text-align: start;
+    cursor: pointer;
+    transition: border-color $transition-fast, background $transition-fast;
+
+    &:hover {
+      border-color: $clr-primary;
+    }
+
+    .planName {
+      @include text($text-sm, $font-semibold, $clr-text-primary);
+    }
+
+    .planDetails {
+      @include text($text-xs, $font-regular, $clr-text-secondary);
+    }
+  }
+
+  .planOptionSelected {
+    border-color: $clr-primary;
+    background: rgba($clr-primary, 0.05);
+  }
+}

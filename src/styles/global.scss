@@ -1,0 +1,112 @@
+@use 'variables' as vars;
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --clr-primary: #{vars.$clr-primary};
+  --clr-primary-light: #{vars.$clr-primary-light};
+  --clr-primary-lighter: #{vars.$clr-primary-lighter};
+  --clr-primary-dark: #{vars.$clr-primary-dark};
+
+  --clr-accent: #{vars.$clr-accent};
+  --clr-accent-light: #{vars.$clr-accent-light};
+  --clr-accent-lighter: #{vars.$clr-accent-lighter};
+
+  --clr-success: #{vars.$clr-success};
+  --clr-success-light: #{vars.$clr-success-light};
+  --clr-warning: #{vars.$clr-warning};
+  --clr-warning-light: #{vars.$clr-warning-light};
+  --clr-danger: #{vars.$clr-danger};
+  --clr-danger-light: #{vars.$clr-danger-light};
+
+  --clr-text-primary: #{vars.$clr-text-primary};
+  --clr-text-secondary: #{vars.$clr-text-secondary};
+  --clr-text-tertiary: #{vars.$clr-text-tertiary};
+  --clr-text-inverse: #{vars.$clr-text-inverse};
+
+  --clr-bg-primary: #{vars.$clr-bg-primary};
+  --clr-bg-secondary: #{vars.$clr-bg-secondary};
+  --clr-bg-tertiary: #{vars.$clr-bg-tertiary};
+  --clr-surface: #{vars.$clr-surface};
+  --clr-surface-hover: #{vars.$clr-surface-hover};
+  --clr-border: #{vars.$clr-border};
+  --clr-border-light: #{vars.$clr-border-light};
+
+  --clr-kid-bg: #{vars.$clr-kid-bg};
+  --clr-kid-card: #{vars.$clr-kid-card};
+  --clr-kid-deposit: #{vars.$clr-kid-deposit};
+  --clr-kid-expense: #{vars.$clr-kid-expense};
+  --clr-kid-savings: #{vars.$clr-kid-savings};
+
+  --clr-parent-bg: #{vars.$clr-parent-bg};
+  --clr-parent-sidebar: #{vars.$clr-parent-sidebar};
+  --clr-parent-sidebar-text: #{vars.$clr-parent-sidebar-text};
+  --clr-parent-sidebar-active: #{vars.$clr-parent-sidebar-active};
+
+  --font-family: 'Heebo', sans-serif;
+  --transition-fast: #{vars.$transition-fast};
+  --transition-base: #{vars.$transition-base};
+  --transition-slow: #{vars.$transition-slow};
+  --transition-spring: #{vars.$transition-spring};
+
+  --header-height: #{vars.$header-height};
+  --sidebar-width: #{vars.$sidebar-width};
+  --sidebar-width-collapsed: #{vars.$sidebar-width-collapsed};
+  --bottom-nav-height: #{vars.$bottom-nav-height};
+  --max-content-width: #{vars.$max-content-width};
+  --kid-max-width: #{vars.$kid-max-width};
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  font-weight: #{vars.$font-regular};
+  color: var(--clr-text-primary);
+  background-color: var(--clr-bg-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+#root {
+  min-height: 100vh;
+}

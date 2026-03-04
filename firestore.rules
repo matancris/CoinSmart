@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Family documents
+    match /families/{familyId} {
+      // Anyone authenticated can read families (needed for child login by code)
+      allow read: if isAuthenticated();
+      // Any authenticated user can create a family (registration)
+      allow create: if isAuthenticated();
+      // Only the family's parent can update
+      allow update: if isAuthenticated() && isFamilyParent(familyId);
+    }
+
+    // User documents
+    match /users/{userId} {
+      // Anyone authenticated can read users (needed for child login flow)
+      allow read: if isAuthenticated();
+      // A user can create their own doc (registration)
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Parents can create child docs in their family
+      allow create: if isAuthenticated() && isParent();
+      // Parents can update users in their family
+      allow update: if isAuthenticated() && isParentInSameFamily(userId);
+      // A user can update their own doc (parent or child with matching lastAuthUid)
+      allow update: if isAuthenticated() && canAccessUser(userId);
+
+      // Transactions subcollection
+      match /transactions/{txId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && canAccessUser(userId);
+        allow update, delete: if isAuthenticated() && isParentInSameFamily(userId);
+      }
+
+      // Savings subcollection
+      match /savings/{savingsId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && canAccessUser(userId);
+        allow delete: if isAuthenticated() && canAccessUser(userId);
+      }
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isParent() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'parent';
+    }
+
+    function isFamilyParent(familyId) {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return user.data.familyId == familyId && user.data.role == 'parent';
+    }
+
+    function isParentInSameFamily(targetUserId) {
+      let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      let target = get(/databases/$(database)/documents/users/$(targetUserId));
+      return requester.data.role == 'parent' && requester.data.familyId == target.data.familyId;
+    }
+
+    function canAccessUser(targetUserId) {
+      let target = get(/databases/$(database)/documents/users/$(targetUserId));
+      return request.auth.uid == targetUserId
+        || isParentInSameFamily(targetUserId)
+        || target.data.lastAuthUid == request.auth.uid;
+    }
+  }
+}

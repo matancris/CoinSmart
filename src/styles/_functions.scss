@@ -1,0 +1,23 @@
+@use 'sass:math';
+@use 'sass:map';
+@use 'variables' as vars;
+
+@function rem($px) {
+  @return math.div($px, 16) * 1rem;
+}
+
+$spacing-map: (1: 0.25rem, 2: 0.5rem, 3: 0.75rem, 4: 1rem, 5: 1.25rem, 6: 1.5rem, 8: 2rem, 10: 2.5rem, 12: 3rem, 16: 4rem);
+
+@function space($step) {
+  @return map.get($spacing-map, $step);
+}
+
+$z-map: (dropdown: 10, sticky: 20, modal-backdrop: 40, modal: 50, toast: 60);
+
+@function z($name) {
+  @return map.get($z-map, $name);
+}
+
+@function tx-color($type) {
+  @return map.get(vars.$transaction-colors, $type);
+}

@@ -1,0 +1,71 @@
+@use '@/styles' as *;
+
+.page {
+  @include page-container;
+  @include flex-col(6);
+  animation: fadeIn $transition-slow;
+}
+
+.header {
+  @include flex-between;
+
+  .title {
+    @include heading($text-2xl);
+  }
+}
+
+.childrenList {
+  @include flex-col(4);
+}
+
+.childRow {
+  @include card;
+  @include flex-between;
+  padding: space(4) space(5);
+
+  .childInfo {
+    @include flex-row(3);
+
+    .details {
+      @include flex-col(1);
+
+      .name {
+        @include text($text-base, $font-semibold, $clr-text-primary);
+      }
+
+      .balance {
+        @include text($text-sm, $font-medium, $clr-primary);
+      }
+    }
+  }
+
+  .actions {
+    @include flex-row(2);
+  }
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: space(2);
+}
+
+.emojiBtn {
+  @include interactive;
+  @include flex-center;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: $text-xl;
+  border: 2px solid transparent;
+  border-radius: $radius-md;
+  background: $clr-bg-tertiary;
+
+  &.selected {
+    border-color: $clr-primary;
+    background: $clr-primary-lighter;
+  }
+
+  &:hover {
+    border-color: $clr-primary-light;
+  }
+}

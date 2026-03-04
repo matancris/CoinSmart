@@ -1,0 +1,80 @@
+@use '@/styles' as *;
+
+.layout {
+  @include flex-col(0);
+  min-height: 100vh;
+  background: $clr-kid-bg;
+}
+
+.header {
+  @include flex-between;
+  padding: space(4);
+  background: $clr-surface;
+  box-shadow: $shadow-sm;
+  position: sticky;
+  top: 0;
+  z-index: z(sticky);
+
+  .greeting {
+    @include flex-row(3);
+
+    .name {
+      @include text($text-lg, $font-bold, $clr-text-primary);
+    }
+  }
+
+  .logoutBtn {
+    @include interactive;
+    @include text($text-sm, $font-medium, $clr-text-secondary);
+    background: none;
+    border: none;
+    padding: space(2);
+
+    &:hover {
+      color: $clr-danger;
+    }
+  }
+}
+
+.main {
+  flex: 1;
+  padding-block-end: $bottom-nav-height;
+}
+
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  inset-inline: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: $clr-surface;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  z-index: z(sticky);
+  height: $bottom-nav-height;
+}
+
+.navItem {
+  @include interactive;
+  @include flex-col(1);
+  @include focus-ring;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: $text-xs;
+  color: $clr-text-tertiary;
+  text-decoration: none;
+  padding: space(1) 0;
+
+  .navIcon {
+    font-size: $text-xl;
+  }
+
+  .navLabel {
+    font-weight: $font-medium;
+  }
+
+  &.active {
+    color: $clr-primary;
+  }
+}
