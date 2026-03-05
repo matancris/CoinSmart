@@ -43,6 +43,11 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: [
+          'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+          'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js',
+          '/firebase-messaging-init.js',
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { User } from 'firebase/auth'
 import type { AppUser, Family } from '@/types'
-import { authService } from '@/services'
+import { authService, notificationService } from '@/services'
 import { handleError, getFirebaseErrorMessage } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
@@ -12,7 +12,7 @@ const CHILD_SESSION_KEY = 'coinsmart_child_session'
 let unsubscribeAuth: (() => void) | null = null
 let suppressAuthListener = false
 
-const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 interface ChildSession {
   childId: string
@@ -105,6 +105,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await authService.updateLastAuthUid(session.childId)
             const appUser = await authService.fetchAppUser(session.childId)
             const family = await authService.fetchFamily(session.familyId)
+            // Sliding expiration: refresh the 7-day timer on each visit
+            const familyCode = localStorage.getItem(FAMILY_CODE_KEY) ?? ''
+            saveChildSession(session.childId, session.familyId, familyCode)
             set({ firebaseUser: firebaseUser ?? null, appUser, family, isLoading: false, isInitialized: true })
           } catch {
             clearChildSession()
@@ -173,6 +176,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
       suppressAuthListener = true
+      const currentUser = get().appUser
+      if (currentUser) {
+        await notificationService.removeToken(currentUser.id).catch(() => {})
+      }
       clearChildSession()
       await authService.logout()
       set({ firebaseUser: null, appUser: null, family: null, isInitialized: true })

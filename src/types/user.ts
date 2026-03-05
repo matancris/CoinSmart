@@ -11,4 +11,5 @@ export interface AppUser {
   totalSavings: number
   isActive: boolean
   createdAt: Date
+  fcmTokens?: string[]
 }

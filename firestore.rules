@@ -29,11 +29,11 @@ service cloud.firestore {
       // Parents can create child docs in their family
       allow create: if isAuthenticated() && isParent();
 
-      // Allow anonymous login stamp: only anonymous users can set lastAuthUid on a child.
+      // Allow anonymous login stamp: only anonymous users can set lastAuthUid or fcmTokens on a child.
       // TODO: Move to Cloud Function for proper PIN verification server-side.
       allow update: if isAuthenticated()
         && request.auth.token.firebase.sign_in_provider == 'anonymous'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAuthUid'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAuthUid', 'fcmTokens'])
         && resource.data.role == 'child';
 
       // Parents can update users in their family
