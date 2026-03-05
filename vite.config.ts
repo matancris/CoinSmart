@@ -1,11 +1,67 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import fs from 'fs'
+
+function firebaseMessagingInitPlugin(): Plugin {
+  function generateContent(env: Record<string, string>): string {
+    return `/* Auto-generated from env vars — do not commit */
+/* eslint-disable no-undef */
+firebase.initializeApp({
+  apiKey: '${env.VITE_FIREBASE_API_KEY}',
+  authDomain: '${env.VITE_FIREBASE_AUTH_DOMAIN}',
+  projectId: '${env.VITE_FIREBASE_PROJECT_ID}',
+  storageBucket: '${env.VITE_FIREBASE_STORAGE_BUCKET}',
+  messagingSenderId: '${env.VITE_FIREBASE_MESSAGING_SENDER_ID}',
+  appId: '${env.VITE_FIREBASE_APP_ID}',
+})
+
+firebase.messaging()
+
+self.addEventListener('push', (event) => {
+  const payload = event.data?.json()
+  if (payload?.notification) return
+  const title = payload?.data?.title
+  const body = payload?.data?.body ?? ''
+  if (!title) return
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/pwa-192x192.png',
+      dir: 'rtl',
+    })
+  )
+})
+`
+  }
+
+  let resolvedRoot = process.cwd()
+  let resolvedOutDir = 'dist'
+
+  return {
+    name: 'generate-firebase-messaging-init',
+    configResolved(config) {
+      resolvedRoot = config.root
+      resolvedOutDir = config.build.outDir
+    },
+    configureServer(server) {
+      const env = loadEnv(server.config.mode, server.config.root, '')
+      const outPath = path.resolve(server.config.root, 'public/firebase-messaging-init.js')
+      fs.writeFileSync(outPath, generateContent(env))
+    },
+    closeBundle() {
+      const env = loadEnv('production', resolvedRoot, '')
+      const outPath = path.resolve(resolvedRoot, resolvedOutDir, 'firebase-messaging-init.js')
+      fs.writeFileSync(outPath, generateContent(env))
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    firebaseMessagingInitPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {

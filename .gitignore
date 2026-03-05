@@ -17,6 +17,7 @@ dist-ssr
 # Firebase
 .firebase/
 .firebaserc
+public/firebase-messaging-init.js
 
 # Claude
 .claude/
