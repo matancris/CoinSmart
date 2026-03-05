@@ -3,21 +3,8 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore } from '@/stores'
 import { Spinner, EmptyState } from '@/components/ui'
-import { formatCurrency, formatDate } from '@/utils'
-import type { TransactionType } from '@/types'
+import { formatCurrency, formatDate, TX_ICONS, POSITIVE_TYPES } from '@/utils'
 import styles from './KidDashboard.module.scss'
-
-const TX_ICONS: Record<TransactionType, string> = {
-  deposit: '💰',
-  withdrawal: '💸',
-  purchase: '🛒',
-  transfer_to_savings: '�',
-  transfer_from_savings: '🔙',
-  deposit_to_savings: '💵',
-  interest: '✨',
-}
-
-const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest']
 
 export function KidDashboard() {
   const { t } = useTranslation()
@@ -47,7 +34,7 @@ export function KidDashboard() {
           <Link to="/wallet/savings" className={styles.sectionLink}>{t('common.edit')}</Link>
         </div>
         <div className={styles.savingsBar}>
-          <span className={styles.savingsIcon}>�</span>
+          <span className={styles.savingsIcon}>{TX_ICONS.transfer_to_savings}</span>
           <div className={styles.savingsInfo}>
             <span className={styles.savingsLabel}>{t('kid.totalSaved')}</span>
             <span className={styles.savingsAmount}>{formatCurrency(totalSavings)}</span>

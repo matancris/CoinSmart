@@ -117,7 +117,7 @@ export function ParentChildren() {
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className={styles.modalBody}>
           <Input
             label={t('parent.childName')}
             value={name}
@@ -125,7 +125,7 @@ export function ParentChildren() {
             required
           />
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6B7280', display: 'block', marginBlockEnd: '0.25rem' }}>
+            <label className={styles.fieldLabel}>
               {t('parent.avatar')}
             </label>
             <div className={styles.emojiGrid}>

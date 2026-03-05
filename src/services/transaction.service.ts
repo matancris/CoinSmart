@@ -42,7 +42,7 @@ export async function createTransaction(
   const userRef = doc(db, 'users', userId)
   const userSnap = await getDoc(userRef)
 
-  if (!userSnap.exists()) throw new Error('User not found')
+  if (!userSnap.exists()) throw new Error('errors.userNotFound')
 
   const currentBalance = (userSnap.data().balance as number) ?? 0
   const delta = getBalanceDelta(data.type, data.amount)

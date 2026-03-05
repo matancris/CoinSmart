@@ -2,12 +2,9 @@ import { create } from 'zustand'
 import type { User } from 'firebase/auth'
 import type { AppUser, Family } from '@/types'
 import { authService, notificationService } from '@/services'
-import { handleError, getFirebaseErrorMessage } from '@/utils'
+import { handleError, getFirebaseErrorMessage, FAMILY_CODE_KEY, CHILD_SESSION_KEY } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
-
-const FAMILY_CODE_KEY = 'coinsmart_family_code'
-const CHILD_SESSION_KEY = 'coinsmart_child_session'
 
 let unsubscribeAuth: (() => void) | null = null
 let suppressAuthListener = false
@@ -28,6 +25,7 @@ interface AuthState {
   isInitialized: boolean
   actions: {
     initialize: () => void
+    validateFamilyCode: (familyCode: string) => Promise<boolean>
     loginWithEmail: (email: string, password: string) => Promise<boolean>
     loginChildWithPin: (familyCode: string, pin: string) => Promise<boolean>
     register: (email: string, password: string, familyName: string, displayName: string) => Promise<boolean>
@@ -117,6 +115,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ firebaseUser, appUser: null, family: null, isLoading: false, isInitialized: true })
         }
       })
+    },
+
+    validateFamilyCode: async (familyCode) => {
+      try {
+        return await authService.validateFamilyCode(familyCode)
+      } catch {
+        return false
+      }
     },
 
     loginWithEmail: async (email, password) => {

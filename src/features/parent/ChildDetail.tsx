@@ -4,20 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
 import { Button, Input, Avatar, Spinner, EmptyState, Modal } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin } from '@/utils'
-import { transactionService } from '@/services'
-import type { AppUser, TransactionType, SavingsType } from '@/types'
+import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES } from '@/utils'
+import type { AppUser, SavingsType } from '@/types'
 import styles from './ChildDetail.module.scss'
-
-const TX_ICONS: Record<TransactionType, string> = {
-  deposit: '💰',
-  withdrawal: '💸',
-  purchase: '🛒',
-  transfer_to_savings: '🚀',
-  transfer_from_savings: '🔙',
-  deposit_to_savings: '💵',
-  interest: '✨',
-}
 
 const PLAN_TYPES: SavingsType[] = ['flexible', 'locked_2m', 'locked_6m']
 
@@ -93,13 +82,7 @@ export function ChildDetail() {
 
   const handleDeleteTx = useCallback(async (txId: string) => {
     if (!child || !confirm(t('parent.confirmDelete'))) return
-    try {
-      await transactionService.deleteTransaction(child.id, txId)
-      walletActions.fetchWallet(child.id)
-      toast(t('common.success'), 'success')
-    } catch {
-      toast(t('errors.generic'), 'error')
-    }
+    await walletActions.deleteTransaction(child.id, txId)
   }, [child, walletActions, t])
 
   const handleCreateGoal = useCallback(async () => {
@@ -379,7 +362,7 @@ export function ChildDetail() {
         <h2 className={styles.sectionTitle}>{t('parent.transactionHistory')}</h2>
         <div className={styles.transactionList}>
           {transactions.map(tx => {
-            const isPositive = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest'].includes(tx.type)
+            const isPositive = POSITIVE_TYPES.includes(tx.type)
             return (
               <div key={tx.id} className={styles.txRow}>
                 <div className={styles.txInfo}>

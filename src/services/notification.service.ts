@@ -2,7 +2,6 @@ import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { getToken, onMessage, type Unsubscribe } from 'firebase/messaging'
 import { db } from '@/config/firebase'
 import { getMessagingInstance } from '@/config/firebase'
-import { toast } from '@/components/ui/Toast'
 
 export async function requestAndSaveToken(userId: string): Promise<void> {
   const messaging = await getMessagingInstance()
@@ -67,7 +66,9 @@ export async function removeToken(userId: string): Promise<void> {
   }
 }
 
-export function initForegroundHandler(): (() => void) {
+export function initForegroundHandler(
+  onNotification: (title: string, body: string) => void
+): (() => void) {
   let unsubscribe: Unsubscribe | null = null
 
   getMessagingInstance().then((messaging) => {
@@ -75,7 +76,7 @@ export function initForegroundHandler(): (() => void) {
     unsubscribe = onMessage(messaging, (payload) => {
       const title = payload.data?.title ?? ''
       const body = payload.data?.body ?? ''
-      toast(`${title}: ${body}`, 'info')
+      onNotification(title, body)
     })
   })
 

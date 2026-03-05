@@ -119,7 +119,7 @@ export async function validateFamilyCode(familyCode: string): Promise<boolean> {
 export async function fetchAppUser(userId: string): Promise<AppUser> {
   const snap = await getDoc(doc(db, 'users', userId))
   if (!snap.exists()) {
-    throw new Error('User not found')
+    throw new Error('errors.userNotFound')
   }
   return parseAppUser(snap.id, snap.data())
 }
@@ -127,7 +127,7 @@ export async function fetchAppUser(userId: string): Promise<AppUser> {
 export async function fetchFamily(familyId: string): Promise<Family> {
   const snap = await getDoc(doc(db, 'families', familyId))
   if (!snap.exists()) {
-    throw new Error('Family not found')
+    throw new Error('errors.familyNotFound')
   }
   const data = snap.data()
   return {

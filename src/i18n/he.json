@@ -121,7 +121,11 @@
     "invalidFamilyCode": "קוד משפחה לא תקין",
     "insufficientBalance": "אין מספיק יתרה",
     "networkError": "בעיית חיבור לרשת",
-    "savingsLocked": "החיסכון נעול עד תאריך הפירעון"
+    "savingsLocked": "החיסכון נעול עד תאריך הפירעון",
+    "passwordMismatch": "הסיסמאות אינן תואמות",
+    "userNotFound": "המשתמש לא נמצא",
+    "familyNotFound": "המשפחה לא נמצאה",
+    "notFound": "לא נמצא"
   },
   "savings": {
     "choosePlan": "בחר תוכנית חיסכון",

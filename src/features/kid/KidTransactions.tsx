@@ -2,21 +2,8 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore } from '@/stores'
 import { Button, Spinner, EmptyState } from '@/components/ui'
-import { formatCurrency, formatDateTime } from '@/utils'
-import type { TransactionType } from '@/types'
+import { formatCurrency, formatDateTime, TX_ICONS, POSITIVE_TYPES } from '@/utils'
 import styles from './KidTransactions.module.scss'
-
-const TX_ICONS: Record<TransactionType, string> = {
-  deposit: '💰',
-  withdrawal: '💸',
-  purchase: '🛒',
-  transfer_to_savings: '🚀',
-  transfer_from_savings: '🔙',
-  deposit_to_savings: '💵',
-  interest: '✨',
-}
-
-const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest']
 
 export function KidTransactions() {
   const { t } = useTranslation()

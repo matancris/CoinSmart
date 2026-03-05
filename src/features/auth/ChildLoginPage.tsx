@@ -2,14 +2,11 @@ import { useState, useRef, useCallback, useEffect, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores'
-import { authService } from '@/services'
 import { Button, Input } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { isValidFamilyCode } from '@/utils'
+import { isValidFamilyCode, FAMILY_CODE_KEY } from '@/utils'
 import layoutStyles from './AuthLayout.module.scss'
 import styles from './ChildLoginPage.module.scss'
-
-const FAMILY_CODE_KEY = 'coinsmart_family_code'
 
 type Step = 'code' | 'pin'
 
@@ -18,7 +15,7 @@ export function ChildLoginPage() {
   const navigate = useNavigate()
   const { code: urlCode } = useParams<{ code: string }>()
   const isLoading = useAuthStore(s => s.isLoading)
-  const { loginChildWithPin } = useAuthStore(s => s.actions)
+  const { loginChildWithPin, validateFamilyCode } = useAuthStore(s => s.actions)
 
   const savedCode = localStorage.getItem(FAMILY_CODE_KEY)
   const [step, setStep] = useState<Step>(savedCode ? 'pin' : 'code')
@@ -54,7 +51,7 @@ export function ChildLoginPage() {
     }
     setLoading(true)
     try {
-      const valid = await authService.validateFamilyCode(code)
+      const valid = await validateFamilyCode(code)
       if (!valid) {
         toast(t('errors.invalidFamilyCode'), 'error')
         return

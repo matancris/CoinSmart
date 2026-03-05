@@ -31,7 +31,7 @@ export function RegisterPage() {
       return
     }
     if (password !== confirmPassword) {
-      toast(t('errors.weakPassword'), 'error')
+      toast(t('errors.passwordMismatch'), 'error')
       return
     }
 

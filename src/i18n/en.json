@@ -121,7 +121,11 @@
     "invalidFamilyCode": "Invalid family code",
     "insufficientBalance": "Insufficient balance",
     "networkError": "Network connection error",
-    "savingsLocked": "Savings locked until maturity date"
+    "savingsLocked": "Savings locked until maturity date",
+    "passwordMismatch": "Passwords do not match",
+    "userNotFound": "User not found",
+    "familyNotFound": "Family not found",
+    "notFound": "Not found"
   },
   "savings": {
     "choosePlan": "Choose Savings Plan",

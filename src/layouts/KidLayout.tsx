@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores'
 import { Avatar } from '@/components/ui'
+import { CHILD_SESSION_KEY } from '@/utils'
 import styles from './KidLayout.module.scss'
 
 export function KidLayout() {
@@ -11,7 +12,7 @@ export function KidLayout() {
   const { logout } = useAuthStore(s => s.actions)
 
   const handleLogout = async () => {
-    localStorage.removeItem('coinsmart_child_session')
+    localStorage.removeItem(CHILD_SESSION_KEY)
     await logout()
     navigate('/child-login')
   }

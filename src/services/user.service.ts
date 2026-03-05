@@ -48,7 +48,7 @@ export async function createChild(data: {
 
 export async function getUser(userId: string): Promise<AppUser> {
   const snap = await getDoc(doc(db, 'users', userId))
-  if (!snap.exists()) throw new Error('User not found')
+  if (!snap.exists()) throw new Error('errors.userNotFound')
   return parseUser(snap.id, snap.data())
 }
 

@@ -44,6 +44,18 @@
   }
 }
 
+.modalBody {
+  @include flex-col(4);
+}
+
+.fieldLabel {
+  display: block;
+  margin-block-end: space(1);
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $clr-text-secondary;
+}
+
 .emojiGrid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
