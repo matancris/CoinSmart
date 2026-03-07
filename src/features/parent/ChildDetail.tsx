@@ -2,13 +2,15 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
-import { Button, Input, Avatar, Spinner, EmptyState, Modal } from '@/components/ui'
+import { Button, Input, Avatar, Spinner, EmptyState, Modal, Select, Badge } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES } from '@/utils'
-import type { AppUser, SavingsType } from '@/types'
+import type { SavingsType, AllowanceFrequency, Allowance } from '@/types'
 import styles from './ChildDetail.module.scss'
 
 const PLAN_TYPES: SavingsType[] = ['flexible', 'locked_2m', 'locked_6m']
+const INTERVAL_PRESETS = [1, 2, 3, 5, 7, 14, 21, 30]
+const DAYS_OF_MONTH = Array.from({ length: 28 }, (_, i) => i + 1)
 
 export function ChildDetail() {
   const { id } = useParams<{ id: string }>()
@@ -17,10 +19,10 @@ export function ChildDetail() {
   const appUser = useAuthStore(s => s.appUser)
   const children = useFamilyStore(s => s.children)
   const familyActions = useFamilyStore(s => s.actions)
-  const { balance, transactions, savingsGoals, isLoading, hasMore } = useWalletStore(s => s)
+  const { balance, transactions, savingsGoals, allowances, isLoading, hasMore } = useWalletStore(s => s)
   const walletActions = useWalletStore(s => s.actions)
 
-  const [child, setChild] = useState<AppUser | null>(null)
+  const child = useMemo(() => children.find(c => c.id === id) ?? null, [children, id])
   const [actionType, setActionType] = useState<'deposit' | 'withdrawal' | 'purchase'>('deposit')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -44,13 +46,20 @@ export function ChildDetail() {
   const [newPin, setNewPin] = useState('')
   const [pinError, setPinError] = useState('')
 
+  const [showAllowanceModal, setShowAllowanceModal] = useState(false)
+  const [editingAllowance, setEditingAllowance] = useState<Allowance | null>(null)
+  const [allowanceAmount, setAllowanceAmount] = useState('')
+  const [allowanceFrequency, setAllowanceFrequency] = useState<AllowanceFrequency>('every_x_days')
+  const [allowanceInterval, setAllowanceInterval] = useState('7')
+  const [allowanceCustomInterval, setAllowanceCustomInterval] = useState('')
+  const [allowanceDayOfMonth, setAllowanceDayOfMonth] = useState('1')
+  const [allowanceDescription, setAllowanceDescription] = useState('')
+
   useEffect(() => {
-    const found = children.find(c => c.id === id)
-    if (found) {
-      setChild(found)
-      walletActions.fetchWallet(found.id)
+    if (child) {
+      walletActions.fetchWallet(child.id)
     }
-  }, [id, children, walletActions])
+  }, [child?.id, walletActions])
 
   const activeGoals = useMemo(
     () => savingsGoals.filter(g => g.status === 'active'),
@@ -162,6 +171,95 @@ export function ChildDetail() {
     await walletActions.deleteSavingsGoal(child.id, goalId, true)
   }, [child, walletActions, t])
 
+  const openAllowanceModal = useCallback((allowance?: Allowance) => {
+    if (allowance) {
+      setEditingAllowance(allowance)
+      setAllowanceAmount(String(allowance.amount))
+      setAllowanceFrequency(allowance.frequency)
+      if (allowance.frequency === 'every_x_days') {
+        const days = allowance.intervalDays ?? 7
+        if (INTERVAL_PRESETS.includes(days)) {
+          setAllowanceInterval(String(days))
+          setAllowanceCustomInterval('')
+        } else {
+          setAllowanceInterval('custom')
+          setAllowanceCustomInterval(String(days))
+        }
+      }
+      if (allowance.frequency === 'monthly') {
+        setAllowanceDayOfMonth(String(allowance.dayOfMonth ?? 1))
+      }
+      setAllowanceDescription(allowance.description)
+    } else {
+      setEditingAllowance(null)
+      setAllowanceAmount('')
+      setAllowanceFrequency('every_x_days')
+      setAllowanceInterval('7')
+      setAllowanceCustomInterval('')
+      setAllowanceDayOfMonth('1')
+      setAllowanceDescription('')
+    }
+    setShowAllowanceModal(true)
+  }, [])
+
+  const handleSaveAllowance = useCallback(async () => {
+    if (!child || !appUser || !allowanceAmount) return
+    const numAmount = parseFloat(allowanceAmount)
+    if (numAmount <= 0) return
+
+    const intervalDays = allowanceFrequency === 'every_x_days'
+      ? (allowanceInterval === 'custom' ? parseInt(allowanceCustomInterval) : parseInt(allowanceInterval))
+      : undefined
+    const dayOfMonth = allowanceFrequency === 'monthly' ? parseInt(allowanceDayOfMonth) : undefined
+
+    if (allowanceFrequency === 'every_x_days' && (!intervalDays || intervalDays <= 0)) return
+    if (allowanceFrequency === 'monthly' && (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 28)) return
+
+    setSubmitting(true)
+    let success: boolean
+    if (editingAllowance) {
+      success = await walletActions.updateAllowance(child.id, editingAllowance.id, {
+        amount: numAmount,
+        frequency: allowanceFrequency,
+        intervalDays,
+        dayOfMonth,
+        description: allowanceDescription || t('allowance.defaultDescription'),
+      })
+    } else {
+      success = await walletActions.createAllowance(child.id, {
+        amount: numAmount,
+        frequency: allowanceFrequency,
+        intervalDays,
+        dayOfMonth,
+        description: allowanceDescription || t('allowance.defaultDescription'),
+        createdBy: appUser.id,
+      })
+    }
+    setSubmitting(false)
+
+    if (success) {
+      setShowAllowanceModal(false)
+    }
+  }, [child, appUser, allowanceAmount, allowanceFrequency, allowanceInterval, allowanceCustomInterval, allowanceDayOfMonth, allowanceDescription, editingAllowance, walletActions, t])
+
+  const handleDeleteAllowance = useCallback(async (allowanceId: string) => {
+    if (!child || !confirm(t('allowance.confirmDelete'))) return
+    await walletActions.deleteAllowance(child.id, allowanceId)
+  }, [child, walletActions, t])
+
+  const handleToggleAllowance = useCallback(async (allowance: Allowance) => {
+    if (!child) return
+    await walletActions.toggleAllowancePause(child.id, allowance.id, allowance.status)
+  }, [child, walletActions])
+
+  const formatAllowanceFrequency = useCallback((a: Allowance) => {
+    if (a.frequency === 'every_x_days') {
+      const days = a.intervalDays ?? 7
+      return days === 1 ? t('allowance.everyDay') : t('allowance.everyXDaysLabel', { days })
+    }
+    return t('allowance.monthlyOnDay', { day: a.dayOfMonth ?? 1 })
+  }, [t])
+
   if (!child || isLoading) return <Spinner size="lg" fullPage />
 
   return (
@@ -197,6 +295,69 @@ export function ChildDetail() {
             {t('parent.resetPin')}
           </Button>
         </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.allowanceHeader}>
+          <h2 className={styles.sectionTitle}>{t('allowance.title')}</h2>
+          <Button size="sm" onClick={() => openAllowanceModal()}>
+            {t('allowance.setup')}
+          </Button>
+        </div>
+
+        {allowances.length > 0 ? (
+          <div className={styles.allowanceList}>
+            {allowances.map(a => (
+              <div key={a.id} className={styles.allowanceCard}>
+                <div className={styles.allowanceCardHeader}>
+                  <div className={styles.allowanceInfo}>
+                    <span className={styles.allowanceAmount}>
+                      {formatCurrency(a.amount)}
+                    </span>
+                    <span className={styles.allowanceFreq}>
+                      {formatAllowanceFrequency(a)}
+                    </span>
+                  </div>
+                  <Badge
+                    label={t(`allowance.${a.status}`)}
+                    color={a.status === 'active' ? 'success' : 'warning'}
+                  />
+                </div>
+                {a.description && (
+                  <span className={styles.allowanceDesc}>{a.description}</span>
+                )}
+                <span className={styles.allowanceNextDue}>
+                  {t('allowance.nextDue')}: {formatDate(a.nextDueAt)}
+                </span>
+                <div className={styles.allowanceActions}>
+                  <Button size="sm" variant="secondary" onClick={() => openAllowanceModal(a)}>
+                    {t('common.edit')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleToggleAllowance(a)}
+                  >
+                    {a.status === 'active' ? t('allowance.pause') : t('allowance.resume')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteAllowance(a.id)}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            emoji="📅"
+            title={t('allowance.noAllowances')}
+            action={<Button onClick={() => openAllowanceModal()}>{t('allowance.setup')}</Button>}
+          />
+        )}
       </div>
 
       <div className={styles.section}>
@@ -549,6 +710,89 @@ export function ChildDetail() {
           error={pinError}
           dir="ltr"
         />
+      </Modal>
+
+      <Modal
+        isOpen={showAllowanceModal}
+        onClose={() => setShowAllowanceModal(false)}
+        title={editingAllowance ? t('allowance.edit') : t('allowance.setup')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowAllowanceModal(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveAllowance} disabled={submitting || !allowanceAmount}>
+              {submitting ? t('common.loading') : t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.allowanceForm}>
+          <Input
+            label={`${t('allowance.amount')} (${t('common.currency')})`}
+            type="number"
+            value={allowanceAmount}
+            onChange={e => setAllowanceAmount(e.target.value)}
+            min="0"
+            dir="ltr"
+          />
+          <div className={styles.frequencyToggle}>
+            <Button
+              size="sm"
+              variant={allowanceFrequency === 'every_x_days' ? 'primary' : 'secondary'}
+              onClick={() => setAllowanceFrequency('every_x_days')}
+            >
+              {t('allowance.everyXDays')}
+            </Button>
+            <Button
+              size="sm"
+              variant={allowanceFrequency === 'monthly' ? 'primary' : 'secondary'}
+              onClick={() => setAllowanceFrequency('monthly')}
+            >
+              {t('allowance.monthly')}
+            </Button>
+          </div>
+          {allowanceFrequency === 'every_x_days' && (
+            <>
+              <Select
+                label={t('allowance.intervalDays')}
+                value={allowanceInterval}
+                onChange={e => setAllowanceInterval(e.target.value)}
+                options={[
+                  ...INTERVAL_PRESETS.map(d => ({
+                    value: String(d),
+                    label: d === 1 ? t('allowance.everyDay') : t('allowance.everyXDaysLabel', { days: d }),
+                  })),
+                  { value: 'custom', label: t('allowance.customDays') },
+                ]}
+              />
+              {allowanceInterval === 'custom' && (
+                <Input
+                  label={t('allowance.intervalDays')}
+                  type="number"
+                  value={allowanceCustomInterval}
+                  onChange={e => setAllowanceCustomInterval(e.target.value)}
+                  min="1"
+                  dir="ltr"
+                />
+              )}
+            </>
+          )}
+          {allowanceFrequency === 'monthly' && (
+            <Select
+              label={t('allowance.dayOfMonth')}
+              value={allowanceDayOfMonth}
+              onChange={e => setAllowanceDayOfMonth(e.target.value)}
+              options={DAYS_OF_MONTH.map(d => ({ value: String(d), label: String(d) }))}
+            />
+          )}
+          <Input
+            label={t('allowance.description')}
+            value={allowanceDescription}
+            onChange={e => setAllowanceDescription(e.target.value)}
+            placeholder={t('allowance.defaultDescription')}
+          />
+        </div>
       </Modal>
     </div>
   )

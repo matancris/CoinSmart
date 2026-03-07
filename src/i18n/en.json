@@ -92,7 +92,8 @@
     "transfer_to_savings": "Transfer to Savings",
     "transfer_from_savings": "Withdrawal from Savings",
     "deposit_to_savings": "Direct deposit to savings",
-    "interest": "Interest"
+    "interest": "Interest",
+    "allowance": "Allowance"
   },
   "common": {
     "save": "Save",
@@ -141,5 +142,30 @@
     "lockedUntilMaturity": "Locked until maturity",
     "noLock": "No lock",
     "setTarget": "Set a target amount"
+  },
+  "allowance": {
+    "title": "Recurring Allowance",
+    "setup": "Set Up Allowance",
+    "edit": "Edit Allowance",
+    "amount": "Amount",
+    "frequency": "Frequency",
+    "everyXDays": "Every X days",
+    "monthly": "Monthly",
+    "intervalDays": "Every how many days",
+    "dayOfMonth": "Day of month",
+    "nextDue": "Next due",
+    "active": "Active",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "delete": "Delete",
+    "confirmDelete": "Delete this recurring allowance?",
+    "description": "Description",
+    "defaultDescription": "Allowance",
+    "customDays": "Other",
+    "noAllowances": "No recurring allowances",
+    "everyDay": "Every day",
+    "everyXDaysLabel": "Every {{days}} days",
+    "monthlyOnDay": "Monthly on the {{day}}th"
   }
 }

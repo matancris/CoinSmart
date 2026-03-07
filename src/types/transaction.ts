@@ -6,6 +6,7 @@ export type TransactionType =
   | 'transfer_from_savings'
   | 'deposit_to_savings'
   | 'interest'
+  | 'allowance'
 
 export interface Transaction {
   id: string

@@ -8,6 +8,7 @@ export const TX_ICONS: Record<TransactionType, string> = {
   transfer_from_savings: '\u{1F519}',
   deposit_to_savings: '\u{1F4B5}',
   interest: '\u2728',
+  allowance: '\u{1F4C5}',
 }
 
-export const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest']
+export const POSITIVE_TYPES: TransactionType[] = ['deposit', 'transfer_from_savings', 'deposit_to_savings', 'interest', 'allowance']

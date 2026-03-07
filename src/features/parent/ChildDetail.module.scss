@@ -271,6 +271,60 @@
   }
 }
 
+.allowanceHeader {
+  @include flex-between;
+}
+
+.allowanceList {
+  @include flex-col(3);
+}
+
+.allowanceCard {
+  @include card;
+  @include flex-col(2);
+  padding: space(4);
+
+  .allowanceCardHeader {
+    @include flex-between;
+    align-items: flex-start;
+
+    .allowanceInfo {
+      @include flex-col(1);
+
+      .allowanceAmount {
+        @include text($text-lg, $font-bold, $clr-primary);
+      }
+
+      .allowanceFreq {
+        @include text($text-sm, $font-medium, $clr-text-secondary);
+      }
+    }
+  }
+
+  .allowanceDesc {
+    @include text($text-sm, $font-regular, $clr-text-secondary);
+  }
+
+  .allowanceNextDue {
+    @include text($text-xs, $font-regular, $clr-text-tertiary);
+  }
+
+  .allowanceActions {
+    @include flex-row(2);
+    flex-wrap: wrap;
+    border-block-start: 1px solid $clr-border;
+    padding-block-start: space(3);
+  }
+}
+
+.allowanceForm {
+  @include flex-col(4);
+
+  .frequencyToggle {
+    @include flex-row(2);
+  }
+}
+
 .transactionList {
   @include flex-col(2);
 }

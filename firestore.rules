@@ -53,6 +53,12 @@ service cloud.firestore {
         allow delete: if isAuthenticated() && isParentInSameFamily(userId);
       }
 
+      // Allowances subcollection — parents can manage, owner/parent can read
+      match /allowances/{allowanceId} {
+        allow read: if isAuthenticated() && canAccessUser(userId);
+        allow create, update, delete: if isAuthenticated() && isParentInSameFamily(userId);
+      }
+
       // Savings subcollection — restricted to owner/parent, validated writes
       match /savings/{savingsId} {
         allow read: if isAuthenticated() && canAccessUser(userId);

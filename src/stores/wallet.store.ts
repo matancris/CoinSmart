@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Transaction, TransactionType, SavingsGoal, SavingsType } from '@/types'
-import { transactionService, savingsService, userService } from '@/services'
+import type { Transaction, TransactionType, SavingsGoal, SavingsType, Allowance, AllowanceFrequency, AllowanceStatus } from '@/types'
+import { transactionService, savingsService, userService, allowanceService } from '@/services'
 import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
@@ -11,6 +11,7 @@ interface WalletState {
   totalSavings: number
   transactions: Transaction[]
   savingsGoals: SavingsGoal[]
+  allowances: Allowance[]
   isLoading: boolean
   hasMore: boolean
   lastDoc: DocumentSnapshot | null
@@ -38,6 +39,24 @@ interface WalletState {
     deleteTransaction: (userId: string, transactionId: string) => Promise<boolean>
     setBalance: (userId: string, newBalance: number) => Promise<boolean>
     refreshBalance: (userId: string) => Promise<void>
+    fetchAllowances: (userId: string) => Promise<void>
+    createAllowance: (userId: string, data: {
+      amount: number
+      frequency: AllowanceFrequency
+      intervalDays?: number
+      dayOfMonth?: number
+      description: string
+      createdBy: string
+    }) => Promise<boolean>
+    updateAllowance: (userId: string, allowanceId: string, data: {
+      amount?: number
+      frequency?: AllowanceFrequency
+      intervalDays?: number
+      dayOfMonth?: number
+      description?: string
+    }) => Promise<boolean>
+    deleteAllowance: (userId: string, allowanceId: string) => Promise<boolean>
+    toggleAllowancePause: (userId: string, allowanceId: string, currentStatus: AllowanceStatus) => Promise<boolean>
   }
 }
 
@@ -46,6 +65,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   totalSavings: 0,
   transactions: [],
   savingsGoals: [],
+  allowances: [],
   isLoading: false,
   hasMore: true,
   lastDoc: null,
@@ -53,20 +73,24 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     fetchWallet: async (userId) => {
       set({ isLoading: true })
       try {
-        const [user, { transactions, lastDoc }, savingsGoals] = await Promise.all([
+        const [user, { transactions, lastDoc }, savingsGoals, allowances] = await Promise.all([
           userService.getUser(userId),
           transactionService.getTransactions(userId, 20),
           savingsService.getSavingsGoals(userId),
+          allowanceService.getAllowances(userId),
         ])
         set({
           balance: user.balance,
           totalSavings: user.totalSavings,
           transactions,
           savingsGoals,
+          allowances,
           lastDoc,
           hasMore: transactions.length === 20,
           isLoading: false,
         })
+
+        let needsRefresh = false
 
         // Apply interest to eligible goals
         const eligibleGoals = savingsGoals.filter(g =>
@@ -76,18 +100,32 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           const results = await Promise.all(
             eligibleGoals.map(g => savingsService.applyInterestIfDue(userId, g))
           )
-          if (results.some(Boolean)) {
-            // Re-fetch if interest was applied
-            const [updatedUser, updatedSavings] = await Promise.all([
-              userService.getUser(userId),
-              savingsService.getSavingsGoals(userId),
-            ])
-            set({
-              balance: updatedUser.balance,
-              totalSavings: updatedUser.totalSavings,
-              savingsGoals: updatedSavings,
-            })
-          }
+          if (results.some(Boolean)) needsRefresh = true
+        }
+
+        // Apply due allowances
+        const activeAllowances = allowances.filter(a => a.status === 'active')
+        if (activeAllowances.length > 0) {
+          const allowanceApplied = await allowanceService.applyAllowancesIfDue(userId, activeAllowances)
+          if (allowanceApplied) needsRefresh = true
+        }
+
+        if (needsRefresh) {
+          const [updatedUser, updatedSavings, updatedAllowances, updatedTx] = await Promise.all([
+            userService.getUser(userId),
+            savingsService.getSavingsGoals(userId),
+            allowanceService.getAllowances(userId),
+            transactionService.getTransactions(userId, 20),
+          ])
+          set({
+            balance: updatedUser.balance,
+            totalSavings: updatedUser.totalSavings,
+            savingsGoals: updatedSavings,
+            allowances: updatedAllowances,
+            transactions: updatedTx.transactions,
+            lastDoc: updatedTx.lastDoc,
+            hasMore: updatedTx.transactions.length === 20,
+          })
         }
       } catch (error) {
         handleError(error, { operation: 'fetchWallet', userId })
@@ -239,6 +277,71 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         set({ balance: user.balance, totalSavings: user.totalSavings })
       } catch (error) {
         handleError(error, { operation: 'refreshBalance', userId })
+      }
+    },
+
+    fetchAllowances: async (userId) => {
+      try {
+        const allowances = await allowanceService.getAllowances(userId)
+        set({ allowances })
+      } catch (error) {
+        handleError(error, { operation: 'fetchAllowances', userId })
+      }
+    },
+
+    createAllowance: async (userId, data) => {
+      try {
+        const allowance = await allowanceService.createAllowance(userId, data)
+        set(state => ({ allowances: [...state.allowances, allowance] }))
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        handleError(error, { operation: 'createAllowance' })
+        toast(i18n.t('errors.generic'), 'error')
+        return false
+      }
+    },
+
+    updateAllowance: async (userId, allowanceId, data) => {
+      try {
+        await allowanceService.updateAllowance(userId, allowanceId, data)
+        const allowances = await allowanceService.getAllowances(userId)
+        set({ allowances })
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        handleError(error, { operation: 'updateAllowance' })
+        toast(i18n.t('errors.generic'), 'error')
+        return false
+      }
+    },
+
+    deleteAllowance: async (userId, allowanceId) => {
+      try {
+        await allowanceService.deleteAllowance(userId, allowanceId)
+        set(state => ({
+          allowances: state.allowances.filter(a => a.id !== allowanceId),
+        }))
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        handleError(error, { operation: 'deleteAllowance' })
+        toast(i18n.t('errors.generic'), 'error')
+        return false
+      }
+    },
+
+    toggleAllowancePause: async (userId, allowanceId, currentStatus) => {
+      try {
+        await allowanceService.toggleAllowanceStatus(userId, allowanceId, currentStatus)
+        const allowances = await allowanceService.getAllowances(userId)
+        set({ allowances })
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        handleError(error, { operation: 'toggleAllowancePause' })
+        toast(i18n.t('errors.generic'), 'error')
+        return false
       }
     },
   },

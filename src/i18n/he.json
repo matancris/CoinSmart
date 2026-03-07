@@ -92,7 +92,8 @@
     "transfer_to_savings": "העברה לחיסכון",
     "transfer_from_savings": "משיכה מחיסכון",
     "deposit_to_savings": "הפקדה ישירה לחיסכון",
-    "interest": "ריבית"
+    "interest": "ריבית",
+    "allowance": "דמי כיס"
   },
   "common": {
     "save": "שמור",
@@ -141,5 +142,30 @@
     "lockedUntilMaturity": "נעול עד מועד הפירעון",
     "noLock": "ללא נעילה",
     "setTarget": "הגדר סכום יעד"
+  },
+  "allowance": {
+    "title": "הוראות קבע",
+    "setup": "הגדר הוראת קבע",
+    "edit": "ערוך הוראת קבע",
+    "amount": "סכום",
+    "frequency": "תדירות",
+    "everyXDays": "כל X ימים",
+    "monthly": "חודשי",
+    "intervalDays": "כל כמה ימים",
+    "dayOfMonth": "יום בחודש",
+    "nextDue": "ביצוע הבא",
+    "active": "פעיל",
+    "paused": "מושהה",
+    "pause": "השהה",
+    "resume": "הפעל",
+    "delete": "מחק",
+    "confirmDelete": "האם למחוק את הוראת הקבע?",
+    "description": "תיאור",
+    "defaultDescription": "דמי כיס",
+    "customDays": "אחר",
+    "noAllowances": "אין הוראות קבע",
+    "everyDay": "כל יום",
+    "everyXDaysLabel": "כל {{days}} ימים",
+    "monthlyOnDay": "בכל {{day}} לחודש"
   }
 }
