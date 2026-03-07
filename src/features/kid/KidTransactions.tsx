@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore } from '@/stores'
 import { Button, Spinner, EmptyState } from '@/components/ui'
@@ -10,10 +9,6 @@ export function KidTransactions() {
   const appUser = useAuthStore(s => s.appUser)
   const { transactions, isLoading, hasMore } = useWalletStore(s => s)
   const { fetchTransactions } = useWalletStore(s => s.actions)
-
-  useEffect(() => {
-    if (appUser?.id) fetchTransactions(appUser.id)
-  }, [appUser?.id, fetchTransactions])
 
   if (isLoading && transactions.length === 0) return <Spinner size="lg" fullPage />
 

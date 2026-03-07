@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useWalletStore } from '@/stores'
 import { Avatar } from '@/components/ui'
 import { CHILD_SESSION_KEY } from '@/utils'
 import styles from './KidLayout.module.scss'
@@ -10,6 +11,12 @@ export function KidLayout() {
   const navigate = useNavigate()
   const appUser = useAuthStore(s => s.appUser)
   const { logout } = useAuthStore(s => s.actions)
+  const walletActions = useWalletStore(s => s.actions)
+
+  useEffect(() => {
+    if (appUser?.id) walletActions.subscribe(appUser.id)
+    return () => walletActions.unsubscribe()
+  }, [appUser?.id, walletActions])
 
   const handleLogout = async () => {
     localStorage.removeItem(CHILD_SESSION_KEY)

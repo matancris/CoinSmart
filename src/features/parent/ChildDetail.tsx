@@ -57,7 +57,8 @@ export function ChildDetail() {
 
   useEffect(() => {
     if (child) {
-      walletActions.fetchWallet(child.id)
+      walletActions.subscribe(child.id)
+      return () => walletActions.unsubscribe()
     }
   }, [child?.id, walletActions])
 

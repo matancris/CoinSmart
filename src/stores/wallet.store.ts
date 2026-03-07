@@ -4,19 +4,24 @@ import { transactionService, savingsService, userService, allowanceService } fro
 import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
-import type { DocumentSnapshot } from 'firebase/firestore'
+
+let unsubUser: (() => void) | null = null
+let unsubTransactions: (() => void) | null = null
+let activeUserId: string | null = null
 
 interface WalletState {
   balance: number
   totalSavings: number
   transactions: Transaction[]
+  olderTransactions: Transaction[]
   savingsGoals: SavingsGoal[]
   allowances: Allowance[]
   isLoading: boolean
   hasMore: boolean
-  lastDoc: DocumentSnapshot | null
+  lastCursor: Date | null
   actions: {
-    fetchWallet: (userId: string) => Promise<void>
+    subscribe: (userId: string) => Promise<void>
+    unsubscribe: () => void
     fetchTransactions: (userId: string, loadMore?: boolean) => Promise<void>
     fetchSavings: (userId: string) => Promise<void>
     createTransaction: (userId: string, data: {
@@ -38,7 +43,6 @@ interface WalletState {
     deleteSavingsGoal: (userId: string, savingsId: string, force?: boolean) => Promise<boolean>
     deleteTransaction: (userId: string, transactionId: string) => Promise<boolean>
     setBalance: (userId: string, newBalance: number) => Promise<boolean>
-    refreshBalance: (userId: string) => Promise<void>
     fetchAllowances: (userId: string) => Promise<void>
     createAllowance: (userId: string, data: {
       amount: number
@@ -64,35 +68,29 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   balance: 0,
   totalSavings: 0,
   transactions: [],
+  olderTransactions: [],
   savingsGoals: [],
   allowances: [],
   isLoading: false,
   hasMore: true,
-  lastDoc: null,
+  lastCursor: null,
   actions: {
-    fetchWallet: async (userId) => {
+    subscribe: async (userId) => {
+      if (activeUserId === userId && unsubUser && unsubTransactions) return
+
+      get().actions.unsubscribe()
+      activeUserId = userId
       set({ isLoading: true })
+
       try {
-        const [user, { transactions, lastDoc }, savingsGoals, allowances] = await Promise.all([
-          userService.getUser(userId),
-          transactionService.getTransactions(userId, 20),
+        const [savingsGoals, allowances] = await Promise.all([
           savingsService.getSavingsGoals(userId),
           allowanceService.getAllowances(userId),
         ])
-        set({
-          balance: user.balance,
-          totalSavings: user.totalSavings,
-          transactions,
-          savingsGoals,
-          allowances,
-          lastDoc,
-          hasMore: transactions.length === 20,
-          isLoading: false,
-        })
+        set({ savingsGoals, allowances })
 
         let needsRefresh = false
 
-        // Apply interest to eligible goals
         const eligibleGoals = savingsGoals.filter(g =>
           g.status === 'active' && g.interestRate > 0
         )
@@ -103,7 +101,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           if (results.some(Boolean)) needsRefresh = true
         }
 
-        // Apply due allowances
         const activeAllowances = allowances.filter(a => a.status === 'active')
         if (activeAllowances.length > 0) {
           const allowanceApplied = await allowanceService.applyAllowancesIfDue(userId, activeAllowances)
@@ -111,42 +108,90 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         }
 
         if (needsRefresh) {
-          const [updatedUser, updatedSavings, updatedAllowances, updatedTx] = await Promise.all([
-            userService.getUser(userId),
+          const [updatedSavings, updatedAllowances] = await Promise.all([
             savingsService.getSavingsGoals(userId),
             allowanceService.getAllowances(userId),
-            transactionService.getTransactions(userId, 20),
           ])
-          set({
-            balance: updatedUser.balance,
-            totalSavings: updatedUser.totalSavings,
-            savingsGoals: updatedSavings,
-            allowances: updatedAllowances,
-            transactions: updatedTx.transactions,
-            lastDoc: updatedTx.lastDoc,
-            hasMore: updatedTx.transactions.length === 20,
-          })
+          set({ savingsGoals: updatedSavings, allowances: updatedAllowances })
         }
       } catch (error) {
-        handleError(error, { operation: 'fetchWallet', userId })
-        set({ isLoading: false })
+        handleError(error, { operation: 'subscribe:init', userId })
       }
+
+      // Guard: abort if unsubscribed or switched user during async init
+      if (activeUserId !== userId) return
+
+      // Start real-time listeners
+      unsubUser = userService.subscribeUser(
+        userId,
+        (user) => {
+          set({ balance: user.balance, totalSavings: user.totalSavings })
+        },
+        (error) => handleError(error, { operation: 'subscribeUser', userId })
+      )
+
+      unsubTransactions = transactionService.subscribeTransactions(
+        userId,
+        20,
+        (liveTransactions) => {
+          set({
+            transactions: [...liveTransactions, ...get().olderTransactions],
+            hasMore: liveTransactions.length === 20,
+            isLoading: false,
+          })
+        },
+        (error) => {
+          handleError(error, { operation: 'subscribeTransactions', userId })
+          set({ isLoading: false })
+        }
+      )
+    },
+
+    unsubscribe: () => {
+      if (unsubUser) { unsubUser(); unsubUser = null }
+      if (unsubTransactions) { unsubTransactions(); unsubTransactions = null }
+      activeUserId = null
+      set({
+        balance: 0,
+        totalSavings: 0,
+        transactions: [],
+        olderTransactions: [],
+        savingsGoals: [],
+        allowances: [],
+        isLoading: false,
+        hasMore: true,
+        lastCursor: null,
+      })
     },
 
     fetchTransactions: async (userId, loadMore = false) => {
+      if (!loadMore) return
       const state = get()
-      if (loadMore && !state.hasMore) return
+      if (!state.hasMore) return
 
       set({ isLoading: true })
       try {
-        const { transactions, lastDoc } = await transactionService.getTransactions(
-          userId,
-          20,
-          loadMore ? (state.lastDoc ?? undefined) : undefined
+        // Use the createdAt of the last live transaction as cursor for the first "Load More"
+        const liveTransactions = state.transactions.slice(0, state.transactions.length - state.olderTransactions.length)
+        const cursor = state.lastCursor
+          ?? (liveTransactions.length > 0 ? liveTransactions[liveTransactions.length - 1].createdAt : null)
+
+        if (!cursor) {
+          set({ isLoading: false, hasMore: false })
+          return
+        }
+
+        const { transactions, lastCursor } = await transactionService.getTransactionsAfterDate(
+          userId, 20, cursor
         )
+
+        const newOlder = [...state.olderTransactions, ...transactions]
+        const liveTx = state.transactions.slice(0, state.transactions.length - state.olderTransactions.length)
+
         set({
-          transactions: loadMore ? [...state.transactions, ...transactions] : transactions,
-          lastDoc,
+          olderTransactions: newOlder,
+          transactions: [...liveTx, ...newOlder],
+          lastCursor,
           hasMore: transactions.length === 20,
           isLoading: false,
         })
@@ -167,11 +212,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     createTransaction: async (userId, data) => {
       try {
-        const tx = await transactionService.createTransaction(userId, data)
-        set(state => ({
-          transactions: [tx, ...state.transactions],
-          balance: tx.balanceAfter,
-        }))
+        await transactionService.createTransaction(userId, data)
         return true
       } catch (error) {
         const appError = handleError(error, { operation: 'createTransaction' })
@@ -196,7 +237,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     transferToSavings: async (userId, savingsId, amount, createdBy) => {
       try {
         await savingsService.transferToSavings(userId, savingsId, amount, createdBy)
-        await get().actions.fetchWallet(userId)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -209,7 +251,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     depositToSavings: async (userId, savingsId, amount, createdBy) => {
       try {
         await savingsService.depositToSavings(userId, savingsId, amount, createdBy)
-        await get().actions.fetchWallet(userId)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -222,7 +265,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     withdrawFromSavings: async (userId, savingsId, amount, createdBy, force) => {
       try {
         await savingsService.withdrawFromSavings(userId, savingsId, amount, createdBy, force)
-        await get().actions.fetchWallet(userId)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -235,7 +279,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     deleteSavingsGoal: async (userId, savingsId, force) => {
       try {
         await savingsService.deleteSavingsGoal(userId, savingsId, force)
-        await get().actions.fetchWallet(userId)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -248,7 +293,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     deleteTransaction: async (userId, transactionId) => {
       try {
         await transactionService.deleteTransaction(userId, transactionId)
-        await get().actions.fetchWallet(userId)
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -261,22 +305,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     setBalance: async (userId, newBalance) => {
       try {
         await userService.setBalance(userId, newBalance)
-        set({ balance: newBalance })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
         handleError(error, { operation: 'setBalance', userId })
         toast(i18n.t('errors.generic'), 'error')
         return false
-      }
-    },
-
-    refreshBalance: async (userId) => {
-      try {
-        const user = await userService.getUser(userId)
-        set({ balance: user.balance, totalSavings: user.totalSavings })
-      } catch (error) {
-        handleError(error, { operation: 'refreshBalance', userId })
       }
     },
 

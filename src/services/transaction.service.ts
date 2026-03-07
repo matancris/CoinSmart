@@ -1,7 +1,8 @@
 import {
   collection, doc, getDocs, updateDoc,
   query, orderBy, limit as firestoreLimit, startAfter,
-  writeBatch, getDoc, type DocumentSnapshot,
+  writeBatch, getDoc, onSnapshot,
+  Timestamp, type DocumentSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import type { Transaction, TransactionType } from '@/types'
@@ -131,6 +132,43 @@ export async function deleteTransaction(userId: string, transactionId: string): 
 
   batch.update(userRef, userUpdates)
   await batch.commit()
+}
+
+export function subscribeTransactions(
+  userId: string,
+  limitCount: number,
+  onData: (transactions: Transaction[]) => void,
+  onError: (error: Error) => void
+): () => void {
+  const ref = collection(db, 'users', userId, 'transactions')
+  const q = query(ref, orderBy('createdAt', 'desc'), firestoreLimit(limitCount))
+
+  return onSnapshot(q, (snap) => {
+    const transactions = snap.docs.map(d => parseTransaction(d.id, d.data()))
+    onData(transactions)
+  }, onError)
+}
+
+export async function getTransactionsAfterDate(
+  userId: string,
+  limitCount: number,
+  afterDate: Date
+): Promise<{ transactions: Transaction[]; lastCursor: Date | null }> {
+  const ref = collection(db, 'users', userId, 'transactions')
+  const q = query(
+    ref,
+    orderBy('createdAt', 'desc'),
+    startAfter(Timestamp.fromDate(afterDate)),
+    firestoreLimit(limitCount)
+  )
+
+  const snap = await getDocs(q)
+  const transactions = snap.docs.map(d => parseTransaction(d.id, d.data()))
+  const lastCursor = transactions.length > 0
+    ? transactions[transactions.length - 1].createdAt
+    : null
+
+  return { transactions, lastCursor }
 }
 
 function getBalanceDelta(type: TransactionType, amount: number): number {

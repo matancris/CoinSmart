@@ -1,20 +1,13 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore, useWalletStore } from '@/stores'
+import { useWalletStore } from '@/stores'
 import { Spinner, EmptyState } from '@/components/ui'
 import { formatCurrency, formatDate, TX_ICONS, POSITIVE_TYPES } from '@/utils'
 import styles from './KidDashboard.module.scss'
 
 export function KidDashboard() {
   const { t } = useTranslation()
-  const appUser = useAuthStore(s => s.appUser)
   const { balance, totalSavings, transactions, savingsGoals, isLoading } = useWalletStore(s => s)
-  const { fetchWallet } = useWalletStore(s => s.actions)
-
-  useEffect(() => {
-    if (appUser?.id) fetchWallet(appUser.id)
-  }, [appUser?.id, fetchWallet])
 
   if (isLoading) return <Spinner size="lg" fullPage />
 

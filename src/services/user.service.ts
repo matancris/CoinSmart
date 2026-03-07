@@ -1,6 +1,6 @@
 import {
   doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  collection, query, where,
+  collection, query, where, onSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import type { AppUser, LoginProfile } from '@/types'
@@ -96,6 +96,24 @@ export async function setBalance(userId: string, newBalance: number): Promise<vo
 export async function removeChild(userId: string, familyId: string): Promise<void> {
   await updateDoc(doc(db, 'users', userId), { isActive: false })
   await deleteDoc(doc(db, 'families', familyId, 'loginProfiles', userId))
+}
+
+export function subscribeUser(
+  userId: string,
+  onData: (user: AppUser) => void,
+  onError: (error: Error) => void
+): () => void {
+  return onSnapshot(
+    doc(db, 'users', userId),
+    (snap) => {
+      if (!snap.exists()) {
+        onError(new Error('errors.userNotFound'))
+        return
+      }
+      onData(parseUser(snap.id, snap.data()))
+    },
+    onError
+  )
 }
 
 function parseUser(id: string, data: Record<string, unknown>): AppUser {
