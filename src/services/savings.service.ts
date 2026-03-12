@@ -66,7 +66,9 @@ export async function transferToSavings(
   if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('errors.notFound')
 
   const balance = (userSnap.data().balance as number) ?? 0
-  if (balance < amount) throw new Error('errors.insufficientBalance')
+  if (Math.round(balance * 100) < Math.round(amount * 100)) {
+    throw new Error('errors.insufficientBalance')
+  }
 
   const currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
   const totalSavings = (userSnap.data().totalSavings as number) ?? 0
@@ -74,12 +76,12 @@ export async function transferToSavings(
   const batch = writeBatch(db)
 
   batch.update(userRef, {
-    balance: balance - amount,
-    totalSavings: totalSavings + amount,
+    balance: Math.round((balance - amount) * 100) / 100,
+    totalSavings: Math.round((totalSavings + amount) * 100) / 100,
   })
 
   batch.update(savingsRef, {
-    currentAmount: currentSavings + amount,
+    currentAmount: Math.round((currentSavings + amount) * 100) / 100,
   })
 
   const txRef = doc(collection(db, 'users', userId, 'transactions'))
@@ -116,11 +118,11 @@ export async function depositToSavings(
   const batch = writeBatch(db)
 
   batch.update(userRef, {
-    totalSavings: totalSavings + amount,
+    totalSavings: Math.round((totalSavings + amount) * 100) / 100,
   })
 
   batch.update(savingsRef, {
-    currentAmount: currentSavings + amount,
+    currentAmount: Math.round((currentSavings + amount) * 100) / 100,
   })
 
   const txRef = doc(collection(db, 'users', userId, 'transactions'))
@@ -178,15 +180,19 @@ export async function withdrawFromSavings(
     writeInterestTransaction(batch, userId, proRataInterest, balance, savingsData.name as string, savingsId, now)
   }
 
-  if (currentSavings < amount) throw new Error('errors.insufficientBalance')
+  if (Math.round(currentSavings * 100) < Math.round(amount * 100)) {
+    throw new Error('errors.insufficientBalance')
+  }
+
+  const newSavingsAmount = Math.round((currentSavings - amount) * 100) / 100
 
   batch.update(userRef, {
-    balance: balance + amount,
-    totalSavings: totalSavings - amount,
+    balance: Math.round((balance + amount) * 100) / 100,
+    totalSavings: Math.round((totalSavings - amount) * 100) / 100,
   })
 
   batch.update(savingsRef, {
-    currentAmount: currentSavings - amount,
+    currentAmount: newSavingsAmount,
     ...(proRataInterest > 0 && {
       accruedInterest: accruedInterest + proRataInterest,
       lastInterestAt: now,
