@@ -116,6 +116,10 @@ export function subscribeUser(
   )
 }
 
+export async function updateLoginProfileAvatar(familyId: string, childId: string, avatarEmoji: string): Promise<void> {
+  await updateDoc(doc(db, 'families', familyId, 'loginProfiles', childId), { avatarEmoji })
+}
+
 function parseUser(id: string, data: Record<string, unknown>): AppUser {
   return {
     id,

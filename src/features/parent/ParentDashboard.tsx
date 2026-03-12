@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useCallback } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useFamilyStore } from '@/stores'
 import { Avatar, Spinner, EmptyState, Button } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { formatCurrency } from '@/utils'
+import { formatCurrency, handleError } from '@/utils'
+import { exportService } from '@/services'
 import styles from './ParentDashboard.module.scss'
 
 export function ParentDashboard() {
@@ -13,6 +14,7 @@ export function ParentDashboard() {
   const children = useFamilyStore(s => s.children)
   const isLoading = useFamilyStore(s => s.isLoading)
   const { fetchChildren } = useFamilyStore(s => s.actions)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (family?.id) fetchChildren(family.id)
@@ -23,6 +25,20 @@ export function ParentDashboard() {
     totalBalance: children.reduce((sum, c) => sum + c.balance, 0),
     totalSavings: children.reduce((sum, c) => sum + c.totalSavings, 0),
   }), [children])
+
+  const handleExport = useCallback(async () => {
+    if (!family?.name || children.length === 0) return
+    setExporting(true)
+    try {
+      await exportService.exportFamilyData(children, family.name)
+      toast(t('export.success'), 'success')
+    } catch (error) {
+      handleError(error, { operation: 'exportFamilyData' })
+      toast(t('errors.generic'), 'error')
+    } finally {
+      setExporting(false)
+    }
+  }, [family?.name, children, t])
 
   const handleShare = useCallback(async () => {
     if (!family?.code) return
@@ -43,7 +59,17 @@ export function ParentDashboard() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>{t('parent.dashboard')}</h1>
+      <div className={styles.header}>
+        <h1 className={styles.title}>{t('parent.dashboard')}</h1>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleExport}
+          disabled={exporting || children.length === 0}
+        >
+          {exporting ? t('common.loading') : t('export.button')}
+        </Button>
+      </div>
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>

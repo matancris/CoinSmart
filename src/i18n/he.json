@@ -83,7 +83,8 @@
     "withdrawFromSavings": "משוך מחיסכון",
     "purchase": "קנייה",
     "setBalance": "קבע יתרה",
-    "depositToSavings": "הפקדה ישירה לחיסכון"
+    "depositToSavings": "הפקדה ישירה לחיסכון",
+    "changeAvatar": "לחצו לשינוי אווטאר"
   },
   "transaction": {
     "deposit": "הפקדה",
@@ -142,6 +143,30 @@
     "lockedUntilMaturity": "נעול עד מועד הפירעון",
     "noLock": "ללא נעילה",
     "setTarget": "הגדר סכום יעד"
+  },
+  "export": {
+    "button": "ייצוא לאקסל",
+    "success": "הקובץ יורד",
+    "summary": "סיכום",
+    "name": "שם",
+    "balance": "יתרה",
+    "totalSavings": "סה\"כ חסכונות",
+    "createdAt": "תאריך יצירה",
+    "transactions": "תנועות",
+    "date": "תאריך",
+    "type": "סוג",
+    "amount": "סכום",
+    "balanceAfter": "יתרה אחרי",
+    "description": "תיאור",
+    "savings": "חסכונות",
+    "currentAmount": "סכום נוכחי",
+    "targetAmount": "סכום יעד",
+    "interestRate": "ריבית",
+    "interestEarned": "ריבית שנצברה",
+    "allowances": "הוראות קבע",
+    "frequency": "תדירות",
+    "status": "סטטוס",
+    "nextDue": "ביצוע הבא"
   },
   "allowance": {
     "title": "הוראות קבע",

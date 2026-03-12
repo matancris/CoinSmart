@@ -69,6 +69,10 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
           await userService.updateUser(childId, userUpdates)
         }
 
+        if (userUpdates.avatarEmoji) {
+          await userService.updateLoginProfileAvatar(child.familyId, childId, userUpdates.avatarEmoji)
+        }
+
         set({
           children: get().children.map(c =>
             c.id === childId ? { ...c, ...userUpdates } : c

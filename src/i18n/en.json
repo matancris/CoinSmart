@@ -83,7 +83,8 @@
     "withdrawFromSavings": "Withdraw from Savings",
     "purchase": "Purchase",
     "setBalance": "Set Balance",
-    "depositToSavings": "Direct Deposit to Savings"
+    "depositToSavings": "Direct Deposit to Savings",
+    "changeAvatar": "Click to change avatar"
   },
   "transaction": {
     "deposit": "Deposit",
@@ -142,6 +143,30 @@
     "lockedUntilMaturity": "Locked until maturity",
     "noLock": "No lock",
     "setTarget": "Set a target amount"
+  },
+  "export": {
+    "button": "Export to Excel",
+    "success": "File downloading",
+    "summary": "Summary",
+    "name": "Name",
+    "balance": "Balance",
+    "totalSavings": "Total Savings",
+    "createdAt": "Created At",
+    "transactions": "Transactions",
+    "date": "Date",
+    "type": "Type",
+    "amount": "Amount",
+    "balanceAfter": "Balance After",
+    "description": "Description",
+    "savings": "Savings",
+    "currentAmount": "Current Amount",
+    "targetAmount": "Target Amount",
+    "interestRate": "Interest Rate",
+    "interestEarned": "Interest Earned",
+    "allowances": "Recurring Allowances",
+    "frequency": "Frequency",
+    "status": "Status",
+    "nextDue": "Next Due"
   },
   "allowance": {
     "title": "Recurring Allowance",

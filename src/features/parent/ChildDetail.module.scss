@@ -42,6 +42,71 @@
       text-align: center;
     }
 
+    .avatarWrapper {
+      position: relative;
+
+      .avatarBtn {
+        @include interactive;
+        position: relative;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+
+        .avatarEditHint {
+          position: absolute;
+          inset-block-end: 0;
+          inset-inline-end: 0;
+          font-size: $text-sm;
+          background: $clr-bg-primary;
+          border-radius: $radius-full;
+          width: 1.5rem;
+          height: 1.5rem;
+          @include flex-center;
+          box-shadow: $shadow-sm;
+        }
+      }
+
+      .emojiPicker {
+        position: absolute;
+        top: 100%;
+        inset-inline-start: 0;
+        z-index: 10;
+        margin-block-start: space(2);
+        padding: space(3);
+        background: $clr-bg-primary;
+        border: 1px solid $clr-border;
+        border-radius: $radius-lg;
+        box-shadow: $shadow-lg;
+
+        .emojiGrid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: space(2);
+        }
+
+        .emojiBtn {
+          @include interactive;
+          @include flex-center;
+          width: 2.75rem;
+          height: 2.75rem;
+          font-size: $text-xl;
+          border: 2px solid transparent;
+          border-radius: $radius-md;
+          background: $clr-bg-tertiary;
+
+          &.selected {
+            border-color: $clr-primary;
+            background: $clr-primary-lighter;
+          }
+
+          &:hover {
+            border-color: $clr-primary-light;
+          }
+        }
+      }
+    }
+
     .profileInfo {
       @include flex-col(1);
       min-width: 0;

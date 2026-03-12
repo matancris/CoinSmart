@@ -11,11 +11,16 @@
   }
 }
 
-.title {
-  @include heading($text-2xl);
+.header {
+  @include flex-between;
+  align-items: center;
 
-  @include respond-below(sm) {
-    font-size: $text-xl;
+  .title {
+    @include heading($text-2xl);
+
+    @include respond-below(sm) {
+      font-size: $text-xl;
+    }
   }
 }
 

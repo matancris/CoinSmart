@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
 import { Button, Input, Avatar, Spinner, EmptyState, Modal, Select, Badge } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES } from '@/utils'
+import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES, EMOJI_OPTIONS } from '@/utils'
 import type { SavingsType, AllowanceFrequency, Allowance } from '@/types'
 import styles from './ChildDetail.module.scss'
 
@@ -45,6 +45,8 @@ export function ChildDetail() {
   const [showPinModal, setShowPinModal] = useState(false)
   const [newPin, setNewPin] = useState('')
   const [pinError, setPinError] = useState('')
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const [showAllowanceModal, setShowAllowanceModal] = useState(false)
   const [editingAllowance, setEditingAllowance] = useState<Allowance | null>(null)
@@ -271,7 +273,34 @@ export function ChildDetail() {
 
       <div className={styles.profileCard}>
         <div className={styles.profileHeader}>
-          <Avatar emoji={child.avatarEmoji} size="xl" />
+          <div className={styles.avatarWrapper}>
+            <button
+              className={styles.avatarBtn}
+              onClick={() => setShowEmojiPicker(prev => !prev)}
+              title={t('parent.changeAvatar')}
+            >
+              <Avatar emoji={child.avatarEmoji} size="xl" />
+              <span className={styles.avatarEditHint}>✏️</span>
+            </button>
+            {showEmojiPicker && (
+              <div className={styles.emojiPicker}>
+                <div className={styles.emojiGrid}>
+                  {EMOJI_OPTIONS.map(e => (
+                    <button
+                      key={e}
+                      className={[styles.emojiBtn, e === child.avatarEmoji ? styles.selected : ''].filter(Boolean).join(' ')}
+                      onClick={async () => {
+                        await familyActions.updateChild(child.id, { avatarEmoji: e })
+                        setShowEmojiPicker(false)
+                      }}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div className={styles.profileInfo}>
             <h1 className={styles.profileName}>{child.displayName}</h1>
             <span className={styles.profileBalance}>{formatCurrency(balance)}</span>

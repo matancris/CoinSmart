@@ -3,12 +3,10 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useFamilyStore } from '@/stores'
 import { Button, Avatar, Modal, Input, Spinner, EmptyState } from '@/components/ui'
-import { isValidPin } from '@/utils'
+import { isValidPin, EMOJI_OPTIONS } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils'
 import styles from './ParentChildren.module.scss'
-
-const EMOJI_OPTIONS = ['😊', '😎', '🦁', '🐱', '🦊', '🐸', '🐵', '🦄', '🐶', '🐰', '🐼', '🚀', '🦋', '🐢', '🐠', '🦖', '⭐', '🌈']
 
 export function ParentChildren() {
   const { t } = useTranslation()
