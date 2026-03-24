@@ -12,6 +12,7 @@ let activeUserId: string | null = null
 interface WalletState {
   balance: number
   totalSavings: number
+  canTransferToSiblings: boolean
   transactions: Transaction[]
   olderTransactions: Transaction[]
   savingsGoals: SavingsGoal[]
@@ -70,6 +71,7 @@ interface WalletState {
 export const useWalletStore = create<WalletState>((set, get) => ({
   balance: 0,
   totalSavings: 0,
+  canTransferToSiblings: true,
   transactions: [],
   olderTransactions: [],
   savingsGoals: [],
@@ -129,7 +131,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       unsubUser = userService.subscribeUser(
         userId,
         (user) => {
-          set({ balance: user.balance, totalSavings: user.totalSavings })
+          set({
+            balance: user.balance,
+            totalSavings: user.totalSavings,
+            canTransferToSiblings: user.canTransferToSiblings !== false,
+          })
         },
         (error) => handleError(error, { operation: 'subscribeUser', userId })
       )
@@ -158,6 +164,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({
         balance: 0,
         totalSavings: 0,
+        canTransferToSiblings: true,
         transactions: [],
         olderTransactions: [],
         savingsGoals: [],

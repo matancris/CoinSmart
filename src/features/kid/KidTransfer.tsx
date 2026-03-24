@@ -11,7 +11,7 @@ type Mode = 'purchase' | 'savings' | 'sibling'
 export function KidTransfer() {
   const { t } = useTranslation()
   const appUser = useAuthStore(s => s.appUser)
-  const { balance, savingsGoals, siblings } = useWalletStore(s => s)
+  const { balance, savingsGoals, siblings, canTransferToSiblings } = useWalletStore(s => s)
   const { createTransaction, transferToSavings, transferToChild, fetchSiblings } = useWalletStore(s => s.actions)
 
   const [mode, setMode] = useState<Mode>('purchase')
@@ -23,10 +23,8 @@ export function KidTransfer() {
   const [submitting, setSubmitting] = useState(false)
 
   const activeGoals = savingsGoals.filter(g => g.status === 'active')
-  const canTransfer = appUser?.canTransferToSiblings !== false
-
   useEffect(() => {
-    if (canTransfer && appUser?.familyId && appUser?.id) {
+    if (canTransferToSiblings && appUser?.familyId && appUser?.id) {
       fetchSiblings(appUser.familyId, appUser.id)
     }
   }, [appUser?.familyId, appUser?.id, fetchSiblings])
@@ -110,7 +108,7 @@ export function KidTransfer() {
     <div className={styles.page}>
       <h1 className={styles.title}>{t('kid.transfer')}</h1>
 
-      <div className={[styles.modeSelector, !canTransfer ? styles.twoColumns : ''].filter(Boolean).join(' ')}>
+      <div className={[styles.modeSelector, !canTransferToSiblings ? styles.twoColumns : ''].filter(Boolean).join(' ')}>
         <button
           className={[styles.modeBtn, mode === 'purchase' ? styles.active : ''].filter(Boolean).join(' ')}
           onClick={() => setMode('purchase')}
@@ -125,7 +123,7 @@ export function KidTransfer() {
           <span className={styles.modeIcon}>🚀</span>
           <span className={styles.modeLabel}>{t('kid.saveMoney')}</span>
         </button>
-        {canTransfer && (
+        {canTransferToSiblings && (
           <button
             className={[styles.modeBtn, mode === 'sibling' ? styles.active : ''].filter(Boolean).join(' ')}
             onClick={() => setMode('sibling')}
