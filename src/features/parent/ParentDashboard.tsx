@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useFamilyStore } from '@/stores'
-import { Avatar, Spinner, EmptyState, Button } from '@/components/ui'
+import { Avatar, EmptyState, Button } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency, handleError } from '@/utils'
 import { exportService } from '@/services'
@@ -12,13 +12,7 @@ export function ParentDashboard() {
   const { t } = useTranslation()
   const family = useAuthStore(s => s.family)
   const children = useFamilyStore(s => s.children)
-  const isLoading = useFamilyStore(s => s.isLoading)
-  const { fetchChildren } = useFamilyStore(s => s.actions)
   const [exporting, setExporting] = useState(false)
-
-  useEffect(() => {
-    if (family?.id) fetchChildren(family.id)
-  }, [family?.id, fetchChildren])
 
   const stats = useMemo(() => ({
     totalChildren: children.length,
@@ -54,8 +48,6 @@ export function ParentDashboard() {
       toast(t('parent.linkCopied'), 'success')
     }
   }, [family?.code, t])
-
-  if (isLoading) return <Spinner size="lg" fullPage />
 
   return (
     <div className={styles.page}>

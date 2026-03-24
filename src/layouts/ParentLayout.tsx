@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore, useUIStore } from '@/stores'
+import { useAuthStore, useUIStore, useFamilyStore } from '@/stores'
 import { Avatar } from '@/components/ui'
 import styles from './ParentLayout.module.scss'
 
@@ -13,7 +13,12 @@ export function ParentLayout() {
   const { logout } = useAuthStore(s => s.actions)
   const sidebarOpen = useUIStore(s => s.sidebarOpen)
   const { toggleSidebar } = useUIStore(s => s.actions)
+  const { fetchChildren } = useFamilyStore(s => s.actions)
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    if (family?.id) fetchChildren(family.id)
+  }, [family?.id, fetchChildren])
 
   const handleLogout = async () => {
     await logout()

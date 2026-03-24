@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useFamilyStore } from '@/stores'
-import { Button, Avatar, Modal, Input, Spinner, EmptyState } from '@/components/ui'
+import { Button, Avatar, Modal, Input, EmptyState } from '@/components/ui'
 import { isValidPin, EMOJI_OPTIONS } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils'
@@ -12,8 +12,7 @@ export function ParentChildren() {
   const { t } = useTranslation()
   const family = useAuthStore(s => s.family)
   const children = useFamilyStore(s => s.children)
-  const isLoading = useFamilyStore(s => s.isLoading)
-  const { fetchChildren, addChild, removeChild } = useFamilyStore(s => s.actions)
+  const { addChild, removeChild } = useFamilyStore(s => s.actions)
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [name, setName] = useState('')
@@ -21,10 +20,6 @@ export function ParentChildren() {
   const [pin, setPin] = useState('')
   const [initialBalance, setInitialBalance] = useState('0')
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (family?.id) fetchChildren(family.id)
-  }, [family?.id, fetchChildren])
 
   const resetForm = useCallback(() => {
     setName('')
@@ -60,8 +55,6 @@ export function ParentChildren() {
     if (!confirm(t('parent.confirmDelete'))) return
     await removeChild(childId)
   }
-
-  if (isLoading) return <Spinner size="lg" fullPage />
 
   return (
     <div className={styles.page}>
