@@ -4,7 +4,8 @@ import {
   writeBatch, getDoc, onSnapshot,
   Timestamp, type DocumentSnapshot,
 } from 'firebase/firestore'
-import { db } from '@/config/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '@/config/firebase'
 import type { Transaction, TransactionType } from '@/types'
 import { toDate } from '@/utils/date'
 import { sanitizeString } from '@/utils/validation'
@@ -171,16 +172,32 @@ export async function getTransactionsAfterDate(
   return { transactions, lastCursor }
 }
 
+export async function createChildTransfer(
+  senderId: string,
+  senderName: string,
+  recipientId: string,
+  recipientName: string,
+  amount: number,
+  note?: string
+): Promise<void> {
+  const callable = httpsCallable(functions, 'transferToChild')
+  const result = await callable({ senderId, senderName, recipientId, recipientName, amount, note })
+  const data = result.data as { success?: boolean }
+  if (!data.success) throw new Error('errors.generic')
+}
+
 function getBalanceDelta(type: TransactionType, amount: number): number {
   switch (type) {
     case 'deposit':
     case 'transfer_from_savings':
     case 'interest':
     case 'allowance':
+    case 'transfer_in':
       return amount
     case 'withdrawal':
     case 'purchase':
     case 'transfer_to_savings':
+    case 'transfer_out':
       return -amount
     case 'deposit_to_savings':
       return 0
@@ -201,5 +218,7 @@ function parseTransaction(id: string, data: Record<string, unknown>): Transactio
     editedBy: data.editedBy as string | undefined,
     note: data.note as string | undefined,
     savingsId: data.savingsId as string | undefined,
+    recipientId: data.recipientId as string | undefined,
+    recipientName: data.recipientName as string | undefined,
   }
 }

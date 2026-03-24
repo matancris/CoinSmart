@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Transaction, TransactionType, SavingsGoal, SavingsType, Allowance, AllowanceFrequency, AllowanceStatus } from '@/types'
+import type { Transaction, TransactionType, SavingsGoal, SavingsType, Allowance, AllowanceFrequency, AllowanceStatus, SiblingProfile } from '@/types'
 import { transactionService, savingsService, userService, allowanceService } from '@/services'
 import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
@@ -16,6 +16,7 @@ interface WalletState {
   olderTransactions: Transaction[]
   savingsGoals: SavingsGoal[]
   allowances: Allowance[]
+  siblings: SiblingProfile[]
   isLoading: boolean
   hasMore: boolean
   lastCursor: Date | null
@@ -61,6 +62,8 @@ interface WalletState {
     }) => Promise<boolean>
     deleteAllowance: (userId: string, allowanceId: string) => Promise<boolean>
     toggleAllowancePause: (userId: string, allowanceId: string, currentStatus: AllowanceStatus) => Promise<boolean>
+    fetchSiblings: (familyId: string, currentUserId: string) => Promise<void>
+    transferToChild: (senderId: string, senderName: string, recipientId: string, recipientName: string, amount: number, note?: string) => Promise<boolean>
   }
 }
 
@@ -71,6 +74,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   olderTransactions: [],
   savingsGoals: [],
   allowances: [],
+  siblings: [],
   isLoading: false,
   hasMore: true,
   lastCursor: null,
@@ -158,6 +162,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         olderTransactions: [],
         savingsGoals: [],
         allowances: [],
+        siblings: [],
         isLoading: false,
         hasMore: true,
         lastCursor: null,
@@ -375,6 +380,27 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       } catch (error) {
         handleError(error, { operation: 'toggleAllowancePause' })
         toast(i18n.t('errors.generic'), 'error')
+        return false
+      }
+    },
+
+    fetchSiblings: async (familyId, currentUserId) => {
+      try {
+        const siblings = await userService.getSiblingProfiles(familyId, currentUserId)
+        set({ siblings })
+      } catch (error) {
+        handleError(error, { operation: 'fetchSiblings', familyId })
+      }
+    },
+
+    transferToChild: async (senderId, senderName, recipientId, recipientName, amount, note) => {
+      try {
+        await transactionService.createChildTransfer(senderId, senderName, recipientId, recipientName, amount, note)
+        toast(i18n.t('common.success'), 'success')
+        return true
+      } catch (error) {
+        const appError = handleError(error, { operation: 'transferToChild' })
+        toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
         return false
       }
     },

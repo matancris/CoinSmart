@@ -49,7 +49,11 @@
     "withdrawFromSavings": "משוך מחיסכון",
     "newGoal": "יעד חדש",
     "progress": "התקדמות",
-    "insufficientBalance": "אין מספיק יתרה"
+    "insufficientBalance": "אין מספיק יתרה",
+    "sendToSibling": "שלח לאח/ות",
+    "selectSibling": "בחר אח/ות",
+    "noSiblings": "אין אחים/אחיות",
+    "sendMoney": "שלח כסף"
   },
   "parent": {
     "dashboard": "לוח בקרה",
@@ -94,7 +98,9 @@
     "transfer_from_savings": "משיכה מחיסכון",
     "deposit_to_savings": "הפקדה ישירה לחיסכון",
     "interest": "ריבית",
-    "allowance": "דמי כיס"
+    "allowance": "דמי כיס",
+    "transfer_out": "העברה לאח/ות",
+    "transfer_in": "קבלה מאח/ות"
   },
   "common": {
     "save": "שמור",

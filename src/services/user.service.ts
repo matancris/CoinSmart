@@ -3,7 +3,7 @@ import {
   collection, query, where, onSnapshot,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
-import type { AppUser, LoginProfile } from '@/types'
+import type { AppUser, LoginProfile, SiblingProfile } from '@/types'
 import { toDate } from '@/utils/date'
 import { sanitizeString } from '@/utils/validation'
 import { generateSalt, hashPin } from '@/utils/crypto'
@@ -114,6 +114,20 @@ export function subscribeUser(
     },
     onError
   )
+}
+
+export async function getSiblingProfiles(familyId: string, currentUserId: string): Promise<SiblingProfile[]> {
+  const snap = await getDocs(collection(db, 'families', familyId, 'loginProfiles'))
+  return snap.docs
+    .filter(d => d.id !== currentUserId)
+    .map(d => {
+      const data = d.data()
+      return {
+        id: d.id,
+        displayName: data.displayName as string,
+        avatarEmoji: (data.avatarEmoji as string) ?? '😊',
+      }
+    })
 }
 
 export async function updateLoginProfileAvatar(familyId: string, childId: string, avatarEmoji: string): Promise<void> {

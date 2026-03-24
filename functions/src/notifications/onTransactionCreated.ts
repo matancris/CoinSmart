@@ -1,9 +1,6 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
-import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
-
-initializeApp()
 
 const db = getFirestore()
 const messaging = getMessaging()
@@ -13,6 +10,8 @@ interface TransactionData {
   amount: number
   description?: string
   createdBy: string
+  recipientId?: string
+  recipientName?: string
 }
 
 interface UserData {
@@ -76,6 +75,39 @@ export const onTransactionCreated = onDocumentCreated(
         'הפקדה חדשה!',
         `קיבלת ₪${tx.amount} לארנק שלך`,
       )
+      return
+    }
+
+    // Transfer received from sibling → notify recipient child + all parents
+    if (tx.type === 'transfer_in' && tx.recipientName) {
+      // Notify the recipient child (userId is the recipient)
+      await sendNotification(
+        userId,
+        'העברה חדשה!',
+        `קיבלת ₪${tx.amount} מ${tx.recipientName}`,
+      )
+
+      // Notify all parents about the transfer
+      const recipientSnap = await db.doc(`users/${userId}`).get()
+      if (recipientSnap.exists) {
+        const recipientData = recipientSnap.data() as UserData
+
+        const parentsSnap = await db
+          .collection('users')
+          .where('familyId', '==', recipientData.familyId)
+          .where('role', '==', 'parent')
+          .get()
+
+        const promises = parentsSnap.docs.map((parentDoc) =>
+          sendNotification(
+            parentDoc.id,
+            'העברה בין ילדים',
+            `${tx.recipientName} שלח/ה ₪${tx.amount} ל${recipientData.displayName}`,
+          ),
+        )
+
+        await Promise.all(promises)
+      }
       return
     }
 

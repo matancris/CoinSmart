@@ -1,26 +1,34 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore } from '@/stores'
-import { Button, Input, Select } from '@/components/ui'
+import { Button, Input, Select, Avatar, EmptyState } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency } from '@/utils'
 import styles from './KidTransfer.module.scss'
 
-type Mode = 'purchase' | 'savings'
+type Mode = 'purchase' | 'savings' | 'sibling'
 
 export function KidTransfer() {
   const { t } = useTranslation()
   const appUser = useAuthStore(s => s.appUser)
-  const { balance, savingsGoals } = useWalletStore(s => s)
-  const { createTransaction, transferToSavings } = useWalletStore(s => s.actions)
+  const { balance, savingsGoals, siblings } = useWalletStore(s => s)
+  const { createTransaction, transferToSavings, transferToChild, fetchSiblings } = useWalletStore(s => s.actions)
 
   const [mode, setMode] = useState<Mode>('purchase')
   const [itemName, setItemName] = useState('')
   const [amount, setAmount] = useState('')
   const [selectedGoal, setSelectedGoal] = useState('')
+  const [selectedSibling, setSelectedSibling] = useState('')
+  const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const activeGoals = savingsGoals.filter(g => g.status === 'active')
+
+  useEffect(() => {
+    if (appUser?.familyId && appUser?.id) {
+      fetchSiblings(appUser.familyId, appUser.id)
+    }
+  }, [appUser?.familyId, appUser?.id, fetchSiblings])
 
   const handlePurchase = useCallback(async () => {
     if (!appUser?.id || !amount || !itemName.trim()) return
@@ -67,6 +75,36 @@ export function KidTransfer() {
     }
   }, [appUser, amount, selectedGoal, balance, transferToSavings, t])
 
+  const handleSiblingTransfer = useCallback(async () => {
+    if (!appUser?.id || !amount || !selectedSibling) return
+    const numAmount = parseFloat(amount)
+    if (numAmount <= 0) return
+    if (numAmount > balance) {
+      toast(t('kid.insufficientBalance'), 'error')
+      return
+    }
+
+    const sibling = siblings.find(s => s.id === selectedSibling)
+    if (!sibling) return
+
+    setSubmitting(true)
+    const success = await transferToChild(
+      appUser.id,
+      appUser.displayName,
+      sibling.id,
+      sibling.displayName,
+      numAmount,
+      note.trim() || undefined
+    )
+    setSubmitting(false)
+
+    if (success) {
+      setAmount('')
+      setSelectedSibling('')
+      setNote('')
+    }
+  }, [appUser, amount, selectedSibling, siblings, balance, note, transferToChild, t])
+
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>{t('kid.transfer')}</h1>
@@ -86,6 +124,13 @@ export function KidTransfer() {
           <span className={styles.modeIcon}>🚀</span>
           <span className={styles.modeLabel}>{t('kid.saveMoney')}</span>
         </button>
+        <button
+          className={[styles.modeBtn, mode === 'sibling' ? styles.active : ''].filter(Boolean).join(' ')}
+          onClick={() => setMode('sibling')}
+        >
+          <span className={styles.modeIcon}>🤝</span>
+          <span className={styles.modeLabel}>{t('kid.sendToSibling')}</span>
+        </button>
       </div>
 
       <div className={styles.form}>
@@ -94,7 +139,7 @@ export function KidTransfer() {
           <span className={styles.balanceValue}>{formatCurrency(balance)}</span>
         </div>
 
-        {mode === 'purchase' ? (
+        {mode === 'purchase' && (
           <>
             <Input
               label={t('kid.itemName')}
@@ -118,7 +163,9 @@ export function KidTransfer() {
               {submitting ? t('common.loading') : t('kid.buySomething')}
             </Button>
           </>
-        ) : (
+        )}
+
+        {mode === 'savings' && (
           <>
             <Select
               label={t('kid.selectGoal')}
@@ -145,6 +192,53 @@ export function KidTransfer() {
             >
               {submitting ? t('common.loading') : t('kid.transferToSavings')}
             </Button>
+          </>
+        )}
+
+        {mode === 'sibling' && (
+          <>
+            {siblings.length === 0 ? (
+              <EmptyState
+                emoji="👨‍👩‍👧‍👦"
+                title={t('kid.noSiblings')}
+              />
+            ) : (
+              <>
+                <label className={styles.siblingLabel}>{t('kid.selectSibling')}</label>
+                <div className={styles.siblingList}>
+                  {siblings.map(s => (
+                    <button
+                      key={s.id}
+                      className={[styles.siblingCard, selectedSibling === s.id ? styles.active : ''].filter(Boolean).join(' ')}
+                      onClick={() => setSelectedSibling(s.id)}
+                    >
+                      <Avatar emoji={s.avatarEmoji} size="md" />
+                      <span className={styles.siblingName}>{s.displayName}</span>
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  label={t('kid.amount')}
+                  type="number"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  min="0"
+                  dir="ltr"
+                />
+                <Input
+                  label={t('kid.description')}
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                />
+                <Button
+                  fullWidth
+                  onClick={handleSiblingTransfer}
+                  disabled={submitting || !selectedSibling || !amount}
+                >
+                  {submitting ? t('common.loading') : t('kid.sendMoney')}
+                </Button>
+              </>
+            )}
           </>
         )}
       </div>

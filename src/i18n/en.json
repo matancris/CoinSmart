@@ -49,7 +49,11 @@
     "withdrawFromSavings": "Withdraw from Savings",
     "newGoal": "New Goal",
     "progress": "Progress",
-    "insufficientBalance": "Insufficient balance"
+    "insufficientBalance": "Insufficient balance",
+    "sendToSibling": "Send to Sibling",
+    "selectSibling": "Select Sibling",
+    "noSiblings": "No siblings",
+    "sendMoney": "Send Money"
   },
   "parent": {
     "dashboard": "Dashboard",
@@ -94,7 +98,9 @@
     "transfer_from_savings": "Withdrawal from Savings",
     "deposit_to_savings": "Direct deposit to savings",
     "interest": "Interest",
-    "allowance": "Allowance"
+    "allowance": "Allowance",
+    "transfer_out": "Transfer to Sibling",
+    "transfer_in": "Received from Sibling"
   },
   "common": {
     "save": "Save",
