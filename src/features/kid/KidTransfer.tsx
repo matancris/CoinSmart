@@ -23,9 +23,10 @@ export function KidTransfer() {
   const [submitting, setSubmitting] = useState(false)
 
   const activeGoals = savingsGoals.filter(g => g.status === 'active')
+  const canTransfer = appUser?.canTransferToSiblings !== false
 
   useEffect(() => {
-    if (appUser?.familyId && appUser?.id) {
+    if (canTransfer && appUser?.familyId && appUser?.id) {
       fetchSiblings(appUser.familyId, appUser.id)
     }
   }, [appUser?.familyId, appUser?.id, fetchSiblings])
@@ -109,7 +110,7 @@ export function KidTransfer() {
     <div className={styles.page}>
       <h1 className={styles.title}>{t('kid.transfer')}</h1>
 
-      <div className={styles.modeSelector}>
+      <div className={[styles.modeSelector, !canTransfer ? styles.twoColumns : ''].filter(Boolean).join(' ')}>
         <button
           className={[styles.modeBtn, mode === 'purchase' ? styles.active : ''].filter(Boolean).join(' ')}
           onClick={() => setMode('purchase')}
@@ -124,13 +125,15 @@ export function KidTransfer() {
           <span className={styles.modeIcon}>🚀</span>
           <span className={styles.modeLabel}>{t('kid.saveMoney')}</span>
         </button>
-        <button
-          className={[styles.modeBtn, mode === 'sibling' ? styles.active : ''].filter(Boolean).join(' ')}
-          onClick={() => setMode('sibling')}
-        >
-          <span className={styles.modeIcon}>🤝</span>
-          <span className={styles.modeLabel}>{t('kid.sendToSibling')}</span>
-        </button>
+        {canTransfer && (
+          <button
+            className={[styles.modeBtn, mode === 'sibling' ? styles.active : ''].filter(Boolean).join(' ')}
+            onClick={() => setMode('sibling')}
+          >
+            <span className={styles.modeIcon}>🤝</span>
+            <span className={styles.modeLabel}>{t('kid.sendToSibling')}</span>
+          </button>
+        )}
       </div>
 
       <div className={styles.form}>

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
-import { Button, Input, Avatar, Spinner, EmptyState, Modal, Select, Badge } from '@/components/ui'
+import { Button, Input, Avatar, Spinner, EmptyState, Modal, Select, Badge, Toggle } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES, EMOJI_OPTIONS } from '@/utils'
 import type { SavingsType, AllowanceFrequency, Allowance } from '@/types'
@@ -324,6 +324,13 @@ export function ChildDetail() {
           >
             {t('parent.resetPin')}
           </Button>
+          <Toggle
+            label={t('parent.allowSiblingTransfer')}
+            checked={child.canTransferToSiblings !== false}
+            onChange={async (checked) => {
+              await familyActions.updateChild(child.id, { canTransferToSiblings: checked })
+            }}
+          />
         </div>
       </div>
 

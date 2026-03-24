@@ -88,7 +88,8 @@
     "purchase": "קנייה",
     "setBalance": "קבע יתרה",
     "depositToSavings": "הפקדה ישירה לחיסכון",
-    "changeAvatar": "לחצו לשינוי אווטאר"
+    "changeAvatar": "לחצו לשינוי אווטאר",
+    "allowSiblingTransfer": "אפשר העברות לאחים"
   },
   "transaction": {
     "deposit": "הפקדה",

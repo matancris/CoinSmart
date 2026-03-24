@@ -88,7 +88,8 @@
     "purchase": "Purchase",
     "setBalance": "Set Balance",
     "depositToSavings": "Direct Deposit to Savings",
-    "changeAvatar": "Click to change avatar"
+    "changeAvatar": "Click to change avatar",
+    "allowSiblingTransfer": "Allow sibling transfers"
   },
   "transaction": {
     "deposit": "Deposit",

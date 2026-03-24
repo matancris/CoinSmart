@@ -14,6 +14,10 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: space(3);
+
+  &.twoColumns {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .modeBtn {

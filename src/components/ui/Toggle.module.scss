@@ -1,0 +1,59 @@
+@use '@/styles' as *;
+
+.toggle {
+  @include flex-row(2);
+  align-items: center;
+  cursor: pointer;
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+
+  &:checked + .track {
+    background: $clr-primary;
+
+    &::after {
+      inset-inline-start: calc(100% - rem(20));
+    }
+  }
+
+  &:focus-visible + .track {
+    outline: 2px solid $clr-primary;
+    outline-offset: 2px;
+  }
+}
+
+.track {
+  position: relative;
+  flex-shrink: 0;
+  width: rem(40);
+  height: rem(22);
+  background: $clr-border;
+  border-radius: rem(11);
+  transition: background $transition-fast;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block-start: rem(2);
+    inset-inline-start: rem(2);
+    width: rem(18);
+    height: rem(18);
+    background: $clr-surface;
+    border-radius: $radius-full;
+    transition: inset-inline-start $transition-fast;
+    box-shadow: $shadow-sm;
+  }
+}
+
+.label {
+  @include text($text-sm, $font-medium, $clr-text-primary);
+}

@@ -13,4 +13,5 @@ export interface AppUser {
   createdAt: Date
   lastAuthUid?: string
   fcmTokens?: string[]
+  canTransferToSiblings?: boolean
 }

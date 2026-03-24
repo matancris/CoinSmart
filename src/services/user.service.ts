@@ -146,5 +146,6 @@ function parseUser(id: string, data: Record<string, unknown>): AppUser {
     totalSavings: (data.totalSavings as number) ?? 0,
     isActive: (data.isActive as boolean) ?? true,
     createdAt: toDate(data.createdAt),
+    canTransferToSiblings: data.canTransferToSiblings as boolean | undefined,
   }
 }

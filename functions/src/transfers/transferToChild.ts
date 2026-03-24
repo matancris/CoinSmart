@@ -52,6 +52,10 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
     throw new HttpsError('permission-denied', 'Must be in the same family')
   }
 
+  if (senderData.canTransferToSiblings === false) {
+    throw new HttpsError('permission-denied', 'errors.generic')
+  }
+
   const senderBalance = (senderData.balance as number) ?? 0
   if (senderBalance < amount) {
     throw new HttpsError('failed-precondition', 'errors.insufficientBalance')

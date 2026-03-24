@@ -2,10 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onTransactionCreated = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
-const app_1 = require("firebase-admin/app");
 const firestore_2 = require("firebase-admin/firestore");
 const messaging_1 = require("firebase-admin/messaging");
-(0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 const messaging = (0, messaging_1.getMessaging)();
 async function sendNotification(recipientId, title, body) {
@@ -18,13 +16,7 @@ async function sendNotification(recipientId, title, body) {
         return;
     const response = await messaging.sendEachForMulticast({
         tokens,
-        notification: { title, body },
-        webpush: {
-            notification: {
-                icon: '/icon-192.png',
-                dir: 'rtl',
-            },
-        },
+        data: { title, body },
     });
     // Prune stale tokens
     const staleTokens = [];
@@ -52,6 +44,24 @@ exports.onTransactionCreated = (0, firestore_1.onDocumentCreated)('users/{userId
     // Deposit from parent → notify child
     if (tx.type === 'deposit' && tx.createdBy !== userId) {
         await sendNotification(userId, 'הפקדה חדשה!', `קיבלת ₪${tx.amount} לארנק שלך`);
+        return;
+    }
+    // Transfer received from sibling → notify recipient child + all parents
+    if (tx.type === 'transfer_in' && tx.recipientName) {
+        // Notify the recipient child (userId is the recipient)
+        await sendNotification(userId, 'העברה חדשה!', `קיבלת ₪${tx.amount} מ${tx.recipientName}`);
+        // Notify all parents about the transfer
+        const recipientSnap = await db.doc(`users/${userId}`).get();
+        if (recipientSnap.exists) {
+            const recipientData = recipientSnap.data();
+            const parentsSnap = await db
+                .collection('users')
+                .where('familyId', '==', recipientData.familyId)
+                .where('role', '==', 'parent')
+                .get();
+            const promises = parentsSnap.docs.map((parentDoc) => sendNotification(parentDoc.id, 'העברה בין ילדים', `${tx.recipientName} שלח/ה ₪${tx.amount} ל${recipientData.displayName}`));
+            await Promise.all(promises);
+        }
         return;
     }
     // Withdrawal/purchase by child → notify all parents in family
