@@ -74,10 +74,15 @@ export async function updateAllowance(
     ? data.dayOfMonth
     : (data.dayOfMonth ?? current.dayOfMonth) as number | undefined
 
-  const now = new Date()
-  const nextDueAt = computeNextDueAt(frequency, now, intervalDays, dayOfMonth)
+  // Only reschedule when the schedule itself changed — editing amount/description keeps the due date
+  const scheduleChanged = frequency !== current.frequency
+    || (frequency === 'every_x_days' && intervalDays !== current.intervalDays)
+    || (frequency === 'monthly' && dayOfMonth !== current.dayOfMonth)
 
-  const updates: Record<string, unknown> = { nextDueAt }
+  const updates: Record<string, unknown> = {}
+  if (scheduleChanged) {
+    updates.nextDueAt = computeNextDueAt(frequency, new Date(), intervalDays, dayOfMonth)
+  }
   if (data.amount !== undefined) updates.amount = data.amount
   if (data.frequency !== undefined) {
     updates.frequency = data.frequency
@@ -144,7 +149,7 @@ export async function applyAllowancesIfDue(
     if (periods <= 0) continue
 
     for (let i = 0; i < periods; i++) {
-      balance += allowance.amount
+      balance = Math.round((balance + allowance.amount) * 100) / 100
       const txRef = doc(collection(db, 'users', userId, 'transactions'))
       batch.set(txRef, {
         id: txRef.id,
@@ -157,12 +162,9 @@ export async function applyAllowancesIfDue(
       })
     }
 
-    const nextDueAt = computeNextDueAt(
-      allowance.frequency,
-      now,
-      allowance.intervalDays,
-      allowance.dayOfMonth
-    )
+    const nextDueAt = allowance.frequency === 'every_x_days'
+      ? advanceByDays(allowance.nextDueAt, periods * (allowance.intervalDays ?? 7))
+      : computeNextDueAt(allowance.frequency, now, allowance.intervalDays, allowance.dayOfMonth)
 
     const allowanceRef = doc(db, 'users', userId, 'allowances', allowance.id)
     batch.update(allowanceRef, {
@@ -201,9 +203,18 @@ export function computeNextDueAt(
   next.setHours(0, 0, 0, 0)
 
   if (next.getDate() >= day) {
+    // Move to the 1st first so e.g. Jan 31 + 1 month doesn't overflow into March
+    next.setDate(1)
     next.setMonth(next.getMonth() + 1)
   }
   next.setDate(day)
+  return next
+}
+
+// Keeps every-X-days allowances on their original schedule instead of drifting to when the app was opened
+function advanceByDays(from: Date, days: number): Date {
+  const next = new Date(from)
+  next.setDate(next.getDate() + days)
   return next
 }
 

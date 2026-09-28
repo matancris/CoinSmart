@@ -57,6 +57,9 @@ service cloud.firestore {
       match /allowances/{allowanceId} {
         allow read: if isAuthenticated() && canAccessUser(userId);
         allow create, update, delete: if isAuthenticated() && isParentInSameFamily(userId);
+        // Due allowances are applied when the child opens the app — only the schedule may advance
+        allow update: if isAuthenticated() && canAccessUser(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastExecutedAt', 'nextDueAt']);
       }
 
       // Savings subcollection — restricted to owner/parent, validated writes

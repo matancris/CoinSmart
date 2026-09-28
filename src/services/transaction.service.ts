@@ -48,7 +48,7 @@ export async function createTransaction(
 
   const currentBalance = (userSnap.data().balance as number) ?? 0
   const delta = getBalanceDelta(data.type, data.amount)
-  const newBalance = currentBalance + delta
+  const newBalance = roundCents(currentBalance + delta)
 
   if (newBalance < 0) throw new Error('errors.insufficientBalance')
 
@@ -99,15 +99,16 @@ export async function deleteTransaction(userId: string, transactionId: string): 
   if (!userSnap.exists()) return
 
   const currentBalance = (userSnap.data().balance as number) ?? 0
-  const delta = getBalanceDelta(tx.type, tx.amount)
-  const restoredBalance = currentBalance - delta
+  // Interest and direct savings deposits land in the savings goal, never in the wallet
+  const delta = tx.type === 'interest' ? 0 : getBalanceDelta(tx.type, tx.amount)
+  const restoredBalance = roundCents(currentBalance - delta)
 
   const batch = writeBatch(db)
   batch.delete(txRef)
 
   const userUpdates: Record<string, number> = { balance: restoredBalance }
 
-  if (tx.savingsId && (tx.type === 'transfer_to_savings' || tx.type === 'transfer_from_savings')) {
+  if (tx.savingsId && SAVINGS_TX_TYPES.includes(tx.type)) {
     const savingsRef = doc(db, 'users', userId, 'savings', tx.savingsId)
     const savingsSnap = await getDoc(savingsRef)
 
@@ -119,16 +120,22 @@ export async function deleteTransaction(userId: string, transactionId: string): 
       return
     }
 
-    const currentSavingsAmount = (savingsSnap.data().currentAmount as number) ?? 0
+    const savingsData = savingsSnap.data()
+    const currentSavingsAmount = (savingsData.currentAmount as number) ?? 0
     const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+    // Reverse the effect: a withdrawal took money out of the goal, every other type put money in
+    const savingsDelta = tx.type === 'transfer_from_savings' ? tx.amount : -tx.amount
 
-    if (tx.type === 'transfer_to_savings') {
-      batch.update(savingsRef, { currentAmount: currentSavingsAmount - tx.amount })
-      userUpdates.totalSavings = totalSavings - tx.amount
-    } else {
-      batch.update(savingsRef, { currentAmount: currentSavingsAmount + tx.amount })
-      userUpdates.totalSavings = totalSavings + tx.amount
+    const savingsUpdates: Record<string, number> = {
+      currentAmount: roundCents(currentSavingsAmount + savingsDelta),
     }
+    if (tx.type === 'interest') {
+      const accruedInterest = (savingsData.accruedInterest as number) ?? 0
+      savingsUpdates.accruedInterest = Math.max(0, roundCents(accruedInterest - tx.amount))
+    }
+
+    batch.update(savingsRef, savingsUpdates)
+    userUpdates.totalSavings = roundCents(totalSavings + savingsDelta)
   }
 
   batch.update(userRef, userUpdates)
@@ -184,6 +191,17 @@ export async function createChildTransfer(
   const result = await callable({ senderId, senderName, recipientId, recipientName, amount, note })
   const data = result.data as { success?: boolean }
   if (!data.success) throw new Error('errors.generic')
+}
+
+const SAVINGS_TX_TYPES: TransactionType[] = [
+  'transfer_to_savings',
+  'transfer_from_savings',
+  'deposit_to_savings',
+  'interest',
+]
+
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100
 }
 
 function getBalanceDelta(type: TransactionType, amount: number): number {

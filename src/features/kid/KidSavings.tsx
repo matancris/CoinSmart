@@ -36,9 +36,10 @@ export function KidSavings() {
   const handleCreateGoal = useCallback(async () => {
     if (!appUser?.id || !goalName.trim()) return
     setSubmitting(true)
+    const parsedTarget = parseFloat(targetAmount)
     const success = await createSavingsGoal(appUser.id, {
       name: goalName.trim(),
-      targetAmount: hasTarget && targetAmount ? parseFloat(targetAmount) : undefined,
+      targetAmount: hasTarget && parsedTarget > 0 ? parsedTarget : undefined,
       savingsType,
     })
     setSubmitting(false)
@@ -114,7 +115,7 @@ export function KidSavings() {
                     )}
                   </div>
                 )}
-                {goal.targetAmount && (
+                {!!goal.targetAmount && (
                   <>
                     <div className={styles.progressBar}>
                       <div

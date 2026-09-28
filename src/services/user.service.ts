@@ -15,6 +15,8 @@ export async function createChild(data: {
   pin: string
   initialBalance: number
 }): Promise<AppUser> {
+  if (await isPinTaken(data.familyId, data.pin)) throw new Error('errors.pinInUse')
+
   const id = doc(collection(db, 'users')).id
 
   const child: AppUser = {
@@ -67,6 +69,8 @@ export async function updateUser(userId: string, updates: Partial<AppUser>): Pro
 }
 
 export async function updateChildPin(familyId: string, childId: string, newPin: string): Promise<void> {
+  if (await isPinTaken(familyId, newPin, childId)) throw new Error('errors.pinInUse')
+
   const salt = generateSalt()
   const pinHash = await hashPin(newPin, salt)
 
@@ -132,6 +136,17 @@ export async function getSiblingProfiles(familyId: string, currentUserId: string
 
 export async function updateLoginProfileAvatar(familyId: string, childId: string, avatarEmoji: string): Promise<void> {
   await updateDoc(doc(db, 'families', familyId, 'loginProfiles', childId), { avatarEmoji })
+}
+
+// Child login matches the PIN against every profile in the family, so PINs must be unique per family
+async function isPinTaken(familyId: string, pin: string, excludeUserId?: string): Promise<boolean> {
+  const snap = await getDocs(collection(db, 'families', familyId, 'loginProfiles'))
+  for (const profileDoc of snap.docs) {
+    if (profileDoc.id === excludeUserId) continue
+    const { pinHash, pinSalt } = profileDoc.data() as LoginProfile
+    if (await hashPin(pin, pinSalt) === pinHash) return true
+  }
+  return false
 }
 
 function parseUser(id: string, data: Record<string, unknown>): AppUser {

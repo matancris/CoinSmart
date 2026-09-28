@@ -14,7 +14,9 @@ export function KidTransfer() {
   const { balance, savingsGoals, siblings, canTransferToSiblings } = useWalletStore(s => s)
   const { createTransaction, transferToSavings, transferToChild, fetchSiblings } = useWalletStore(s => s.actions)
 
-  const [mode, setMode] = useState<Mode>('purchase')
+  const [selectedMode, setMode] = useState<Mode>('purchase')
+  // A parent can revoke sibling transfers while this screen is open
+  const mode: Mode = selectedMode === 'sibling' && !canTransferToSiblings ? 'purchase' : selectedMode
   const [itemName, setItemName] = useState('')
   const [amount, setAmount] = useState('')
   const [selectedGoal, setSelectedGoal] = useState('')
@@ -27,7 +29,7 @@ export function KidTransfer() {
     if (canTransferToSiblings && appUser?.familyId && appUser?.id) {
       fetchSiblings(appUser.familyId, appUser.id)
     }
-  }, [appUser?.familyId, appUser?.id, fetchSiblings])
+  }, [canTransferToSiblings, appUser?.familyId, appUser?.id, fetchSiblings])
 
   const handlePurchase = useCallback(async () => {
     if (!appUser?.id || !amount || !itemName.trim()) return

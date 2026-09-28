@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores'
 import { AuthGuard, RoleGuard } from '@/guards'
+import { Spinner } from '@/components/ui'
 import { KidLayout } from '@/layouts/KidLayout'
 import { ParentLayout } from '@/layouts/ParentLayout'
 import { LoginPage, RegisterPage, ChildLoginPage } from '@/features/auth'
@@ -9,6 +11,15 @@ import { ParentDashboard, ParentChildren, ChildDetail } from '@/features/parent'
 
 function RootRedirect() {
   const appUser = useAuthStore(s => s.appUser)
+  const isInitialized = useAuthStore(s => s.isInitialized)
+  const { initialize } = useAuthStore(s => s.actions)
+
+  // Restore any existing session before deciding where to send the user
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  if (!isInitialized) return <Spinner size="lg" fullPage />
   if (!appUser) return <Navigate to="/login" replace />
   return <Navigate to={appUser.role === 'parent' ? '/manage' : '/wallet'} replace />
 }

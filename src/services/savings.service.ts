@@ -82,6 +82,8 @@ export async function transferToSavings(
 
   batch.update(savingsRef, {
     currentAmount: Math.round((currentSavings + amount) * 100) / 100,
+    // Interest accrues from the first deposit, not from when an empty goal was created
+    ...(currentSavings <= 0 && { lastInterestAt: new Date() }),
   })
 
   const txRef = doc(collection(db, 'users', userId, 'transactions'))
@@ -89,7 +91,7 @@ export async function transferToSavings(
     id: txRef.id,
     type: 'transfer_to_savings',
     amount,
-    balanceAfter: balance - amount,
+    balanceAfter: Math.round((balance - amount) * 100) / 100,
     description: savingsSnap.data().name,
     savingsId,
     createdAt: new Date(),
@@ -123,6 +125,8 @@ export async function depositToSavings(
 
   batch.update(savingsRef, {
     currentAmount: Math.round((currentSavings + amount) * 100) / 100,
+    // Interest accrues from the first deposit, not from when an empty goal was created
+    ...(currentSavings <= 0 && { lastInterestAt: new Date() }),
   })
 
   const txRef = doc(collection(db, 'users', userId, 'transactions'))
@@ -194,7 +198,7 @@ export async function withdrawFromSavings(
   batch.update(savingsRef, {
     currentAmount: newSavingsAmount,
     ...(proRataInterest > 0 && {
-      accruedInterest: accruedInterest + proRataInterest,
+      accruedInterest: Math.round((accruedInterest + proRataInterest) * 100) / 100,
       lastInterestAt: now,
     }),
   })
@@ -204,7 +208,7 @@ export async function withdrawFromSavings(
     id: txRef.id,
     type: 'transfer_from_savings',
     amount,
-    balanceAfter: balance + amount,
+    balanceAfter: Math.round((balance + amount) * 100) / 100,
     description: savingsData.name,
     savingsId,
     createdAt: now,
@@ -253,8 +257,8 @@ export async function deleteSavingsGoal(
 
   batch.delete(savingsRef)
   batch.update(userRef, {
-    balance: balance + currentAmount,
-    totalSavings: totalSavings - currentAmount,
+    balance: Math.round((balance + currentAmount) * 100) / 100,
+    totalSavings: Math.round((totalSavings - currentAmount) * 100) / 100,
   })
   await batch.commit()
 }
@@ -293,8 +297,8 @@ export async function applyInterestIfDue(
     const monthInterest = Math.round(runningAmount * monthlyRate * 100) / 100
     if (monthInterest <= 0) continue
 
-    totalInterest += monthInterest
-    runningAmount += monthInterest
+    totalInterest = Math.round((totalInterest + monthInterest) * 100) / 100
+    runningAmount = Math.round((runningAmount + monthInterest) * 100) / 100
 
     const txRef = doc(collection(db, 'users', userId, 'transactions'))
     batch.set(txRef, {
@@ -313,12 +317,12 @@ export async function applyInterestIfDue(
 
   batch.update(savingsRef, {
     currentAmount: runningAmount,
-    accruedInterest: goal.accruedInterest + totalInterest,
+    accruedInterest: Math.round((goal.accruedInterest + totalInterest) * 100) / 100,
     lastInterestAt: now,
   })
 
   batch.update(userRef, {
-    totalSavings: totalSavings + totalInterest,
+    totalSavings: Math.round((totalSavings + totalInterest) * 100) / 100,
   })
 
   await batch.commit()

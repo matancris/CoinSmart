@@ -19,7 +19,7 @@ export function ChildDetail() {
   const appUser = useAuthStore(s => s.appUser)
   const children = useFamilyStore(s => s.children)
   const familyActions = useFamilyStore(s => s.actions)
-  const { balance, transactions, savingsGoals, allowances, isLoading, hasMore } = useWalletStore(s => s)
+  const { balance, totalSavings, transactions, savingsGoals, allowances, isLoading, hasMore } = useWalletStore(s => s)
   const walletActions = useWalletStore(s => s.actions)
 
   const child = useMemo(() => children.find(c => c.id === id) ?? null, [children, id])
@@ -57,12 +57,18 @@ export function ChildDetail() {
   const [allowanceDayOfMonth, setAllowanceDayOfMonth] = useState('1')
   const [allowanceDescription, setAllowanceDescription] = useState('')
 
+  const childId = child?.id
+  const childFamilyId = child?.familyId
+
   useEffect(() => {
-    if (child) {
-      walletActions.subscribe(child.id)
-      return () => walletActions.unsubscribe()
+    if (!childId || !childFamilyId) return
+    walletActions.subscribe(childId)
+    return () => {
+      walletActions.unsubscribe()
+      // Balances change while viewing a child — refresh the list so the dashboard isn't stale
+      familyActions.fetchChildren(childFamilyId)
     }
-  }, [child?.id, walletActions])
+  }, [childId, childFamilyId, walletActions, familyActions])
 
   const activeGoals = useMemo(
     () => savingsGoals.filter(g => g.status === 'active'),
@@ -100,9 +106,10 @@ export function ChildDetail() {
   const handleCreateGoal = useCallback(async () => {
     if (!child || !goalName.trim()) return
     setSubmitting(true)
+    const parsedTarget = parseFloat(targetAmount)
     const success = await walletActions.createSavingsGoal(child.id, {
       name: goalName.trim(),
-      targetAmount: hasTarget && targetAmount ? parseFloat(targetAmount) : undefined,
+      targetAmount: hasTarget && parsedTarget > 0 ? parsedTarget : undefined,
       savingsType,
     })
     setSubmitting(false)
@@ -263,7 +270,8 @@ export function ChildDetail() {
     return t('allowance.monthlyOnDay', { day: a.dayOfMonth ?? 1 })
   }, [t])
 
-  if (!child || isLoading) return <Spinner size="lg" fullPage />
+  // Only block on the initial load — "load more" also sets isLoading and must not blank the page
+  if (!child || (isLoading && transactions.length === 0)) return <Spinner size="lg" fullPage />
 
   return (
     <div className={styles.page}>
@@ -305,7 +313,7 @@ export function ChildDetail() {
             <h1 className={styles.profileName}>{child.displayName}</h1>
             <span className={styles.profileBalance}>{formatCurrency(balance)}</span>
             <span className={styles.profileSavings}>
-              {t('kid.savings')}: {formatCurrency(child.totalSavings)}
+              {t('kid.savings')}: {formatCurrency(totalSavings)}
             </span>
           </div>
         </div>
@@ -498,7 +506,7 @@ export function ChildDetail() {
                       )}
                     </div>
                   )}
-                  {goal.targetAmount && (
+                  {!!goal.targetAmount && (
                     <>
                       <div className={styles.progressBar}>
                         <div
@@ -595,8 +603,9 @@ export function ChildDetail() {
           <Button
             variant="ghost"
             onClick={() => child && walletActions.fetchTransactions(child.id, true)}
+            disabled={isLoading}
           >
-            {t('common.loadMore')}
+            {isLoading ? t('common.loading') : t('common.loadMore')}
           </Button>
         )}
       </div>

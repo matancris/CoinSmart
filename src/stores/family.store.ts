@@ -48,8 +48,8 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
-        handleError(error, { operation: 'addChild' })
-        toast(i18n.t('errors.generic'), 'error')
+        const appError = handleError(error, { operation: 'addChild' })
+        toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
         return false
       }
     },
@@ -81,8 +81,8 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
-        handleError(error, { operation: 'updateChild', childId })
-        toast(i18n.t('errors.generic'), 'error')
+        const appError = handleError(error, { operation: 'updateChild', childId })
+        toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
         return false
       }
     },

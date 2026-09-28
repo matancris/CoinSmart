@@ -134,7 +134,8 @@
     "passwordMismatch": "הסיסמאות אינן תואמות",
     "userNotFound": "המשתמש לא נמצא",
     "familyNotFound": "המשפחה לא נמצאה",
-    "notFound": "לא נמצא"
+    "notFound": "לא נמצא",
+    "pinInUse": "קוד ה-PIN כבר בשימוש אצל ילד אחר במשפחה"
   },
   "savings": {
     "choosePlan": "בחר תוכנית חיסכון",

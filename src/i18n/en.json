@@ -134,7 +134,8 @@
     "passwordMismatch": "Passwords do not match",
     "userNotFound": "User not found",
     "familyNotFound": "Family not found",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "pinInUse": "This PIN is already used by another child in the family"
   },
   "savings": {
     "choosePlan": "Choose Savings Plan",

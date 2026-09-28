@@ -17,6 +17,18 @@ async function fetchAllTransactions(userId: string): Promise<Transaction[]> {
   return all
 }
 
+// Excel rejects sheet names over 31 chars, containing \ / ? * [ ] :, or duplicated (case-insensitive)
+function toUniqueSheetName(name: string, used: Set<string>): string {
+  const base = name.replace(/[\\/?*[\]:]/g, '').trim().slice(0, 31) || 'Sheet'
+  let candidate = base
+  for (let i = 2; used.has(candidate.toLowerCase()); i++) {
+    const suffix = ` (${i})`
+    candidate = base.slice(0, 31 - suffix.length) + suffix
+  }
+  used.add(candidate.toLowerCase())
+  return candidate
+}
+
 export async function exportFamilyData(children: AppUser[], familyName: string): Promise<void> {
   const XLSX = await import('xlsx')
   const t = i18n.t.bind(i18n)
@@ -54,7 +66,8 @@ export async function exportFamilyData(children: AppUser[], familyName: string):
   })
   const summaryWs = XLSX.utils.aoa_to_sheet([summaryHeaders, ...summaryData])
   if (isHebrew) summaryWs['!RTL'] = true
-  XLSX.utils.book_append_sheet(wb, summaryWs, t('export.summary'))
+  const usedSheetNames = new Set<string>()
+  XLSX.utils.book_append_sheet(wb, summaryWs, toUniqueSheetName(t('export.summary'), usedSheetNames))
 
   // Per-child sheets
   for (const child of children) {
@@ -145,9 +158,7 @@ export async function exportFamilyData(children: AppUser[], familyName: string):
     const ws = XLSX.utils.aoa_to_sheet(rows)
     if (isHebrew) ws['!RTL'] = true
 
-    // Truncate sheet name to 31 chars (Excel limit)
-    const sheetName = child.displayName.slice(0, 31)
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    XLSX.utils.book_append_sheet(wb, ws, toUniqueSheetName(child.displayName, usedSheetNames))
   }
 
   const dateStr = new Date().toISOString().slice(0, 10)

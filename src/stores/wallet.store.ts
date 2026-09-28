@@ -100,11 +100,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         const eligibleGoals = savingsGoals.filter(g =>
           g.status === 'active' && g.interestRate > 0
         )
-        if (eligibleGoals.length > 0) {
-          const results = await Promise.all(
-            eligibleGoals.map(g => savingsService.applyInterestIfDue(userId, g))
-          )
-          if (results.some(Boolean)) needsRefresh = true
+        // Sequential: each goal read-modify-writes the user's totalSavings, so parallel runs lose updates
+        for (const goal of eligibleGoals) {
+          if (await savingsService.applyInterestIfDue(userId, goal)) needsRefresh = true
         }
 
         const activeAllowances = allowances.filter(a => a.status === 'active')
@@ -144,9 +142,29 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         userId,
         20,
         (liveTransactions) => {
+          const state = get()
+          if (state.olderTransactions.length === 0) {
+            set({
+              transactions: liveTransactions,
+              hasMore: liveTransactions.length === 20,
+              isLoading: false,
+            })
+            return
+          }
+
+          // Older pages are loaded: keep rows that a new transaction pushed out of the live window,
+          // and drop rows that a deletion pulled into it, so the merged list has no gaps or duplicates
+          const liveIds = new Set(liveTransactions.map(tx => tx.id))
+          const oldestLive = liveTransactions[liveTransactions.length - 1]?.createdAt
+          const prevLive = state.transactions.slice(0, state.transactions.length - state.olderTransactions.length)
+          const pushedOut = liveTransactions.length === 20 && oldestLive
+            ? prevLive.filter(tx => !liveIds.has(tx.id) && tx.createdAt < oldestLive)
+            : []
+          const olderTransactions = [...pushedOut, ...state.olderTransactions].filter(tx => !liveIds.has(tx.id))
+
           set({
-            transactions: [...liveTransactions, ...get().olderTransactions],
-            hasMore: liveTransactions.length === 20,
+            olderTransactions,
+            transactions: [...liveTransactions, ...olderTransactions],
             isLoading: false,
           })
         },

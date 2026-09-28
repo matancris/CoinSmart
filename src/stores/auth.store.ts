@@ -182,14 +182,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
       suppressAuthListener = true
-      const currentUser = get().appUser
-      if (currentUser) {
-        await notificationService.removeToken(currentUser.id).catch(() => {})
+      try {
+        const currentUser = get().appUser
+        if (currentUser) {
+          await notificationService.removeToken(currentUser.id).catch(() => {})
+        }
+        clearChildSession()
+        await authService.logout()
+        set({ firebaseUser: null, appUser: null, family: null, isInitialized: true })
+      } finally {
+        suppressAuthListener = false
       }
-      clearChildSession()
-      await authService.logout()
-      set({ firebaseUser: null, appUser: null, family: null, isInitialized: true })
-      suppressAuthListener = false
     },
 
     setChildSession: (appUser, family) => {
