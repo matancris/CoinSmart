@@ -3,19 +3,25 @@
 .emptyState {
   @include flex-col(3);
   align-items: center;
-  padding: space(8) space(4);
+  padding: space(10) space(4);
   text-align: center;
 
   .emoji {
-    font-size: 3rem;
+    @include flex-center;
+    width: 5rem;
+    height: 5rem;
+    font-size: 2.5rem;
+    background: $clr-primary-lighter;
+    border-radius: $radius-full;
+    animation: coinBounce 2.4s ease-in-out infinite;
   }
 
   .title {
-    @include text($text-lg, $font-semibold, $clr-text-primary);
+    @include text($text-lg, $font-bold, $clr-text-primary);
   }
 
   .description {
-    @include text($text-sm, $font-regular, $clr-text-tertiary);
+    @include text($text-sm, $font-regular, $clr-text-secondary);
     max-width: 20rem;
   }
 

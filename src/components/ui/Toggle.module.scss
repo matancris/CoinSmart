@@ -18,10 +18,10 @@
   height: 0;
 
   &:checked + .track {
-    background: $clr-primary;
+    background: $gradient-primary;
 
     &::after {
-      inset-inline-start: calc(100% - rem(20));
+      inset-inline-start: calc(100% - rem(22));
     }
   }
 
@@ -34,10 +34,10 @@
 .track {
   position: relative;
   flex-shrink: 0;
-  width: rem(40);
-  height: rem(22);
+  width: rem(44);
+  height: rem(24);
   background: $clr-border;
-  border-radius: rem(11);
+  border-radius: $radius-full;
   transition: background $transition-fast;
 
   &::after {
@@ -45,8 +45,8 @@
     position: absolute;
     inset-block-start: rem(2);
     inset-inline-start: rem(2);
-    width: rem(18);
-    height: rem(18);
+    width: rem(20);
+    height: rem(20);
     background: $clr-surface;
     border-radius: $radius-full;
     transition: inset-inline-start $transition-fast;

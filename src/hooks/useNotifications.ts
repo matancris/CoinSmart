@@ -1,31 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
+import { useNotificationStore } from '@/stores/notification.store'
 import { notificationService } from '@/services'
 import { toast } from '@/components/ui/Toast'
 
 export function useNotifications() {
-  const appUser = useAuthStore((state) => state.appUser)
-  const cleanupRef = useRef<(() => void) | null>(null)
+  const userId = useAuthStore((state) => state.appUser?.id)
+  const { init } = useNotificationStore((state) => state.actions)
 
   useEffect(() => {
-    if (!appUser) {
-      cleanupRef.current?.()
-      cleanupRef.current = null
-      return
-    }
+    if (!userId) return
 
-    // Fire-and-forget token registration
-    notificationService.requestAndSaveToken(appUser.id).catch((err) => console.warn('[Notifications]', err))
+    init(userId)
 
-    // Set up foreground message handler
-    const unsubscribe = notificationService.initForegroundHandler((title, body) => {
-      toast(`${title}: ${body}`, 'info')
+    return notificationService.initForegroundHandler(({ title, body }) => {
+      toast(body || title, 'info', { title: body ? title : undefined })
     })
-    cleanupRef.current = () => unsubscribe?.()
-
-    return () => {
-      cleanupRef.current?.()
-      cleanupRef.current = null
-    }
-  }, [appUser])
+  }, [userId, init])
 }

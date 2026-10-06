@@ -1,51 +1,58 @@
 @use 'sass:map';
 
 // ── Primary Colors ──
-$clr-primary: #4F8CF7;
-$clr-primary-light: #7BABFF;
-$clr-primary-lighter: #E8F0FE;
-$clr-primary-dark: #3A6FD8;
+$clr-primary: #4F6EF7;
+$clr-primary-light: #8EA2FF;
+$clr-primary-lighter: #EEF1FF;
+$clr-primary-dark: #3A52D6;
+$clr-violet: #8B5CF6;
 
 // ── Accent Colors ──
-$clr-accent: #FFD166;
-$clr-accent-light: #FFE0A0;
-$clr-accent-lighter: #FFF5E0;
+$clr-accent: #F5A524;
+$clr-accent-light: #FFD98A;
+$clr-accent-lighter: #FFF6E5;
 
 // ── Semantic Colors ──
-$clr-success: #06D6A0;
-$clr-success-light: #D1FAE5;
-$clr-warning: #FBBF24;
+$clr-success: #12B886;
+$clr-success-light: #DDF8EE;
+$clr-warning: #F59E0B;
 $clr-warning-light: #FEF3C7;
-$clr-danger: #EF476F;
-$clr-danger-light: #FEE2E2;
+$clr-danger: #F0466B;
+$clr-danger-light: #FFE4EA;
 
 // ── Text Colors ──
-$clr-text-primary: #1A1A2E;
-$clr-text-secondary: #6B7280;
-$clr-text-tertiary: #9CA3AF;
+$clr-text-primary: #151A30;
+$clr-text-secondary: #5B6478;
+$clr-text-tertiary: #9AA3B5;
 $clr-text-inverse: #FFFFFF;
 
 // ── Surface & Background ──
-$clr-bg-primary: #F8FAFC;
+$clr-bg-primary: #F4F6FB;
 $clr-bg-secondary: #FFFFFF;
-$clr-bg-tertiary: #F1F5F9;
+$clr-bg-tertiary: #EEF1F7;
 $clr-surface: #FFFFFF;
-$clr-surface-hover: #F8FAFC;
-$clr-border: #E2E8F0;
-$clr-border-light: #F1F5F9;
+$clr-surface-hover: #F7F8FC;
+$clr-border: #E3E7F0;
+$clr-border-light: #EEF1F6;
 
 // ── Kid Interface Colors ──
-$clr-kid-bg: #FAFBFF;
+$clr-kid-bg: #F4F6FB;
 $clr-kid-card: #FFFFFF;
-$clr-kid-deposit: #06D6A0;
-$clr-kid-expense: #EF476F;
-$clr-kid-savings: #4F8CF7;
+$clr-kid-deposit: #12B886;
+$clr-kid-expense: #F0466B;
+$clr-kid-savings: #4F6EF7;
 
 // ── Parent Interface Colors ──
-$clr-parent-bg: #F8FAFC;
-$clr-parent-sidebar: #1A1A2E;
-$clr-parent-sidebar-text: #E2E8F0;
-$clr-parent-sidebar-active: #4F8CF7;
+$clr-parent-bg: #F4F6FB;
+$clr-parent-sidebar: #141A33;
+$clr-parent-sidebar-text: #C9D0E3;
+$clr-parent-sidebar-active: #FFFFFF;
+
+// ── Gradients ──
+$gradient-primary: linear-gradient(135deg, #4F6EF7 0%, #7B5CF6 100%);
+$gradient-success: linear-gradient(135deg, #12B886 0%, #20C9A6 100%);
+$gradient-accent: linear-gradient(135deg, #F7B733 0%, #F5853F 100%);
+$gradient-sidebar: linear-gradient(180deg, #161C38 0%, #1E2550 100%);
 
 // ── Typography ──
 $font-thin: 100;
@@ -67,21 +74,23 @@ $text-4xl: 2.25rem;
 $text-kid-balance: 3rem;
 
 // ── Border Radius ──
-$radius-sm: 6px;
-$radius-md: 8px;
-$radius-lg: 12px;
-$radius-xl: 16px;
-$radius-2xl: 24px;
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+$radius-2xl: 28px;
 $radius-full: 9999px;
-$radius-kid: 16px;
-$radius-parent: 8px;
+$radius-kid: 20px;
+$radius-parent: 12px;
 
 // ── Shadows ──
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-$shadow-card: 0 2px 8px rgba(79, 140, 247, 0.08);
-$shadow-card-hover: 0 4px 16px rgba(79, 140, 247, 0.12);
+$shadow-sm: 0 1px 2px rgba(21, 26, 48, 0.05);
+$shadow-md: 0 4px 12px -2px rgba(21, 26, 48, 0.08), 0 2px 4px -2px rgba(21, 26, 48, 0.04);
+$shadow-lg: 0 16px 32px -8px rgba(21, 26, 48, 0.16), 0 4px 8px -4px rgba(21, 26, 48, 0.06);
+$shadow-card: 0 1px 2px rgba(21, 26, 48, 0.04), 0 4px 16px -4px rgba(21, 26, 48, 0.06);
+$shadow-card-hover: 0 2px 4px rgba(21, 26, 48, 0.05), 0 12px 28px -8px rgba(21, 26, 48, 0.12);
+$shadow-primary: 0 8px 20px -6px rgba(79, 110, 247, 0.55);
+$shadow-hero: 0 20px 40px -16px rgba(79, 110, 247, 0.6);
 
 // ── Transitions ──
 $transition-fast: 150ms ease;
@@ -91,9 +100,11 @@ $transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
 // ── Layout ──
 $header-height: 4rem;
+$safe-top: env(safe-area-inset-top, 0);
+$safe-bottom: env(safe-area-inset-bottom, 0);
 $sidebar-width: 16rem;
 $sidebar-width-collapsed: 4.5rem;
-$bottom-nav-height: 4rem;
+$bottom-nav-height: 4.5rem;
 $max-content-width: 75rem;
 $kid-max-width: 30rem;
 
@@ -114,4 +125,7 @@ $transaction-colors: (
   'transfer_from_savings': $clr-accent,
   'interest': $clr-success,
   'allowance': $clr-kid-deposit,
+  'deposit_to_savings': $clr-kid-savings,
+  'transfer_out': $clr-violet,
+  'transfer_in': $clr-violet,
 );

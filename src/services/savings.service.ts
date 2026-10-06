@@ -1,6 +1,6 @@
 import {
   collection, doc, getDocs, setDoc,
-  query, where, writeBatch, getDoc,
+  query, where, writeBatch, getDoc, runTransaction,
   type WriteBatch, type DocumentData,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
@@ -263,6 +263,8 @@ export async function deleteSavingsGoal(
   await batch.commit()
 }
 
+// Fallback for when the child opens the app before the daily server job ran.
+// Transactional so it can't credit the same month twice.
 export async function applyInterestIfDue(
   userId: string,
   goal: SavingsGoal
@@ -271,62 +273,60 @@ export async function applyInterestIfDue(
     return false
   }
 
-  const lastApplied = goal.lastInterestAt ?? goal.createdAt
-  const now = new Date()
-
-  const monthsElapsed = (now.getFullYear() - lastApplied.getFullYear()) * 12
-    + (now.getMonth() - lastApplied.getMonth())
-
-  if (monthsElapsed <= 0) return false
-
-  const monthlyRate = goal.interestRate / 12
-  let runningAmount = goal.currentAmount
-  let totalInterest = 0
-
   const userRef = doc(db, 'users', userId)
   const savingsRef = doc(db, 'users', userId, 'savings', goal.id)
-  const userSnap = await getDoc(userRef)
-  if (!userSnap.exists()) return false
 
-  const walletBalance = (userSnap.data().balance as number) ?? 0
-  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+  return runTransaction(db, async (tx) => {
+    const [userSnap, savingsSnap] = await Promise.all([tx.get(userRef), tx.get(savingsRef)])
+    if (!userSnap.exists() || !savingsSnap.exists()) return false
 
-  const batch = writeBatch(db)
+    const fresh = parseSavingsGoal(savingsSnap.id, savingsSnap.data())
+    if (fresh.currentAmount <= 0 || fresh.interestRate <= 0 || fresh.status !== 'active') return false
 
-  for (let i = 0; i < monthsElapsed; i++) {
-    const monthInterest = Math.round(runningAmount * monthlyRate * 100) / 100
-    if (monthInterest <= 0) continue
+    const lastApplied = fresh.lastInterestAt ?? fresh.createdAt
+    const now = new Date()
+    const monthsElapsed = (now.getFullYear() - lastApplied.getFullYear()) * 12
+      + (now.getMonth() - lastApplied.getMonth())
+    if (monthsElapsed <= 0) return false
 
-    totalInterest = Math.round((totalInterest + monthInterest) * 100) / 100
-    runningAmount = Math.round((runningAmount + monthInterest) * 100) / 100
+    const monthlyRate = fresh.interestRate / 12
+    const walletBalance = (userSnap.data().balance as number) ?? 0
+    const totalSavings = (userSnap.data().totalSavings as number) ?? 0
+    let runningAmount = fresh.currentAmount
+    let totalInterest = 0
 
-    const txRef = doc(collection(db, 'users', userId, 'transactions'))
-    batch.set(txRef, {
-      id: txRef.id,
-      type: 'interest',
-      amount: monthInterest,
-      balanceAfter: walletBalance,
-      description: goal.name,
-      savingsId: goal.id,
-      createdAt: new Date(),
-      createdBy: 'system',
+    for (let i = 0; i < monthsElapsed; i++) {
+      const monthInterest = Math.round(runningAmount * monthlyRate * 100) / 100
+      if (monthInterest <= 0) continue
+
+      totalInterest = Math.round((totalInterest + monthInterest) * 100) / 100
+      runningAmount = Math.round((runningAmount + monthInterest) * 100) / 100
+
+      const txRef = doc(collection(db, 'users', userId, 'transactions'))
+      tx.set(txRef, {
+        id: txRef.id,
+        type: 'interest',
+        amount: monthInterest,
+        balanceAfter: walletBalance,
+        description: fresh.name,
+        savingsId: fresh.id,
+        createdAt: now,
+        createdBy: 'system',
+      })
+    }
+
+    if (totalInterest <= 0) return false
+
+    tx.update(savingsRef, {
+      currentAmount: runningAmount,
+      accruedInterest: Math.round((fresh.accruedInterest + totalInterest) * 100) / 100,
+      lastInterestAt: now,
     })
-  }
-
-  if (totalInterest <= 0) return false
-
-  batch.update(savingsRef, {
-    currentAmount: runningAmount,
-    accruedInterest: Math.round((goal.accruedInterest + totalInterest) * 100) / 100,
-    lastInterestAt: now,
+    tx.update(userRef, {
+      totalSavings: Math.round((totalSavings + totalInterest) * 100) / 100,
+    })
+    return true
   })
-
-  batch.update(userRef, {
-    totalSavings: Math.round((totalSavings + totalInterest) * 100) / 100,
-  })
-
-  await batch.commit()
-  return true
 }
 
 function calculateProRataInterest(

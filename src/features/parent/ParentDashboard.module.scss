@@ -3,11 +3,11 @@
 .page {
   @include page-container;
   @include flex-col(6);
+  padding: 0;
   animation: fadeIn $transition-slow;
 
   @include respond-below(sm) {
-    gap: space(4);
-    padding: space(3);
+    gap: space(5);
   }
 }
 
@@ -16,72 +16,72 @@
   align-items: center;
 
   .title {
-    @include heading($text-2xl);
+    @include heading($text-3xl);
 
     @include respond-below(sm) {
-      font-size: $text-xl;
+      font-size: $text-2xl;
     }
   }
 }
 
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: space(4);
+.heroCard {
+  @include hero-card;
+  @include flex-col(1);
+  padding: space(6);
 
-  @include respond-below(md) {
+  @include respond-below(sm) {
+    padding: space(5);
+  }
+
+  .heroLabel {
+    @include text($text-sm, $font-semibold, rgba(255, 255, 255, 0.8));
+  }
+
+  .heroAmount {
+    @include amount;
+    font-size: $text-4xl;
+    font-weight: $font-extrabold;
+    line-height: 1.1;
+
+    @include respond-below(sm) {
+      font-size: $text-kid-balance * 0.8;
+    }
+  }
+
+  .heroStats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: space(3);
+    max-width: rem(480);
+    margin-block-start: space(4);
   }
 
-  @include respond-below(sm) {
-    grid-template-columns: repeat(3, 1fr);
-    gap: space(2);
-  }
-}
-
-.statCard {
-  @include card;
-  @include flex-col(2);
-  padding: space(5);
-  align-items: center;
-  text-align: center;
-
-  @include respond-below(md) {
-    padding: space(4);
-    gap: space(1);
+  .heroStat {
+    @include flex-row(2);
+    padding: space(2) space(3);
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: $radius-md;
+    backdrop-filter: blur(8px);
   }
 
-  @include respond-below(sm) {
-    padding: space(3) space(2);
-    gap: space(1);
+  .heroStatIcon {
+    font-size: $text-lg;
   }
 
-  .statIcon {
-    font-size: $text-2xl;
-
-    @include respond-below(sm) {
-      font-size: $text-lg;
-    }
+  .heroStatText {
+    @include flex-col(0);
+    min-width: 0;
   }
 
-  .statLabel {
-    @include text($text-sm, $font-medium, $clr-text-secondary);
-
-    @include respond-below(sm) {
-      font-size: $text-xs;
-    }
+  .heroStatLabel {
+    @include truncate;
+    @include text($text-xs, $font-medium, rgba(255, 255, 255, 0.8));
   }
 
-  .statValue {
-    @include heading($text-2xl);
-
-    @include respond-below(md) {
-      font-size: $text-xl;
-    }
-
-    @include respond-below(sm) {
-      font-size: $text-base;
-    }
+  .heroStatValue {
+    @include amount;
+    @include text($text-base, $font-bold, $clr-text-inverse);
   }
 }
 
@@ -89,6 +89,7 @@
   @include card;
   @include flex-between;
   padding: space(4) space(5);
+  background: linear-gradient(135deg, $clr-accent-lighter 0%, $clr-surface 80%);
 
   @include respond-below(sm) {
     flex-direction: column;
@@ -99,13 +100,14 @@
   }
 
   .codeLabel {
-    @include text($text-sm, $font-medium, $clr-text-secondary);
+    @include text($text-sm, $font-semibold, $clr-text-secondary);
   }
 
   .codeValue {
     @include heading($text-2xl);
-    color: $clr-primary;
-    letter-spacing: 0.15em;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    color: $clr-text-primary;
+    letter-spacing: 0.2em;
     direction: ltr;
 
     @include respond-below(sm) {
@@ -116,23 +118,18 @@
   .shareBtn {
     align-self: center;
     white-space: nowrap;
+    color: $clr-primary-dark;
+    background: $clr-surface;
+    box-shadow: $shadow-sm;
   }
 }
 
 .childrenSection {
   @include flex-col(3);
-
-  @include respond-below(sm) {
-    gap: space(2);
-  }
 }
 
 .childrenTitle {
-  @include heading($text-lg);
-
-  @include respond-below(sm) {
-    font-size: $text-base;
-  }
+  @include section-title;
 }
 
 .childrenGrid {
@@ -142,45 +139,47 @@
 
   @include respond-below(sm) {
     grid-template-columns: repeat(2, 1fr);
-    gap: space(2);
+    gap: space(3);
   }
 }
 
 .childCard {
-  @include card;
-  @include flex-col(2);
+  @include card($radius-xl);
+  @include flex-col(1);
   @include interactive;
-  padding: space(5);
-  text-decoration: none;
+  @include pressable;
   align-items: center;
+  padding: space(5) space(3);
   text-align: center;
+  text-decoration: none;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
 
   @include respond-below(sm) {
-    padding: space(3);
-    gap: space(1);
+    padding: space(4) space(2);
   }
 
   .childName {
-    @include text($text-base, $font-semibold, $clr-text-primary);
-
-    @include respond-below(sm) {
-      font-size: $text-sm;
-    }
+    @include text($text-base, $font-bold, $clr-text-primary);
+    margin-block-start: space(2);
   }
 
   .childBalance {
-    @include text($text-lg, $font-bold, $clr-primary);
+    @include amount;
+    @include text($text-xl, $font-extrabold, $clr-primary);
 
     @include respond-below(sm) {
-      font-size: $text-base;
+      font-size: $text-lg;
     }
   }
 
   .childSavings {
-    @include text($text-sm, $font-regular, $clr-text-secondary);
-
-    @include respond-below(sm) {
-      font-size: $text-xs;
-    }
+    @include amount;
+    @include text($text-xs, $font-semibold, $clr-text-secondary);
+    padding: space(1) space(2);
+    background: $clr-bg-tertiary;
+    border-radius: $radius-full;
   }
 }

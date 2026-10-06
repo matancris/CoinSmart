@@ -5,6 +5,9 @@ import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
 
+let unsubChildren: (() => void) | null = null
+let activeFamilyId: string | null = null
+
 interface ChildUpdates extends Partial<AppUser> {
   pin?: string
 }
@@ -14,6 +17,8 @@ interface FamilyState {
   isLoading: boolean
   actions: {
     fetchChildren: (familyId: string) => Promise<void>
+    subscribeChildren: (familyId: string) => void
+    unsubscribeChildren: () => void
     addChild: (data: {
       familyId: string
       displayName: string
@@ -39,6 +44,28 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
         handleError(error, { operation: 'fetchChildren', familyId })
         set({ isLoading: false })
       }
+    },
+
+    subscribeChildren: (familyId) => {
+      if (activeFamilyId === familyId && unsubChildren) return
+      get().actions.unsubscribeChildren()
+      activeFamilyId = familyId
+      set({ isLoading: true })
+
+      unsubChildren = userService.subscribeChildrenByFamily(
+        familyId,
+        (children) => set({ children: children.filter(c => c.isActive), isLoading: false }),
+        (error) => {
+          handleError(error, { operation: 'subscribeChildren', familyId })
+          set({ isLoading: false })
+        }
+      )
+    },
+
+    unsubscribeChildren: () => {
+      unsubChildren?.()
+      unsubChildren = null
+      activeFamilyId = null
     },
 
     addChild: async (data) => {

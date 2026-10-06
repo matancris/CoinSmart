@@ -64,6 +64,24 @@ export async function getChildrenByFamily(familyId: string): Promise<AppUser[]> 
   return snap.docs.map(d => parseUser(d.id, d.data()))
 }
 
+// Live so the parent sees allowances, interest and kids' spending land without refreshing
+export function subscribeChildrenByFamily(
+  familyId: string,
+  onData: (children: AppUser[]) => void,
+  onError: (error: Error) => void
+): () => void {
+  const q = query(
+    collection(db, 'users'),
+    where('familyId', '==', familyId),
+    where('role', '==', 'child')
+  )
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map(d => parseUser(d.id, d.data()))),
+    onError
+  )
+}
+
 export async function updateUser(userId: string, updates: Partial<AppUser>): Promise<void> {
   await updateDoc(doc(db, 'users', userId), updates as Record<string, string | number | boolean | Date | undefined>)
 }

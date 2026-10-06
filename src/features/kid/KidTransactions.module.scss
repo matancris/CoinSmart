@@ -7,7 +7,7 @@
 }
 
 .title {
-  @include heading($text-xl);
+  @include heading($text-2xl);
 }
 
 .list {
@@ -17,24 +17,25 @@
 .txRow {
   @include card($radius-kid);
   @include flex-between;
+  gap: space(3);
   padding: space(3) space(4);
 
   .txInfo {
     @include flex-row(3);
+    min-width: 0;
 
     .txIcon {
-      @include flex-center;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: $radius-full;
-      font-size: $text-base;
+      @include icon-tile(2.75rem);
+      font-size: $text-lg;
     }
 
     .txDetails {
       @include flex-col(0);
+      min-width: 0;
 
       .txDesc {
-        @include text($text-sm, $font-medium, $clr-text-primary);
+        @include truncate;
+        @include text($text-sm, $font-semibold, $clr-text-primary);
       }
 
       .txMeta {
@@ -45,10 +46,12 @@
 
   .txRight {
     @include flex-col(0);
+    flex-shrink: 0;
     align-items: flex-end;
 
     .txAmount {
-      @include text($text-sm, $font-bold);
+      @include amount;
+      @include text($text-base, $font-bold);
 
       &.positive {
         color: $clr-kid-deposit;
@@ -60,15 +63,16 @@
     }
 
     .txBalance {
+      @include amount;
       @include text($text-xs, $font-regular, $clr-text-tertiary);
     }
   }
 }
 
 @each $type, $color in $transaction-colors {
-  .txType-#{$type} {
-    background: rgba($color, 0.12);
+  .txRow .txIcon.txType-#{$type} {
     color: $color;
+    background: rgba($color, 0.12);
   }
 }
 

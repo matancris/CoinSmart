@@ -7,7 +7,7 @@
 }
 
 .title {
-  @include heading($text-xl);
+  @include heading($text-2xl);
 }
 
 .modeSelector {
@@ -24,11 +24,13 @@
   @include interactive;
   @include flex-col(2);
   @include focus-ring;
+  @include pressable;
   align-items: center;
   padding: space(4);
   background: $clr-surface;
-  border: 2px solid $clr-border;
+  border: 1.5px solid $clr-border;
   border-radius: $radius-kid;
+  box-shadow: $shadow-card;
 
   .modeIcon {
     font-size: 2rem;
@@ -39,8 +41,9 @@
   }
 
   &.active {
-    border-color: $clr-primary;
     background: $clr-primary-lighter;
+    border-color: $clr-primary;
+    box-shadow: 0 0 0 3px rgba($clr-primary, 0.12);
   }
 
   &:hover {
@@ -65,6 +68,7 @@
   }
 
   .balanceValue {
+    @include amount;
     @include text($text-base, $font-bold, $clr-primary);
   }
 }
@@ -83,10 +87,11 @@
   @include interactive;
   @include flex-col(2);
   @include focus-ring;
+  @include pressable;
   align-items: center;
   padding: space(3);
   background: $clr-surface;
-  border: 2px solid $clr-border;
+  border: 1.5px solid $clr-border;
   border-radius: $radius-kid;
 
   .siblingName {

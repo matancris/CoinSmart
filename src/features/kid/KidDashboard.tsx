@@ -1,47 +1,108 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useWalletStore } from '@/stores'
 import { Spinner, EmptyState } from '@/components/ui'
+import { NotificationPrompt } from '@/components/notifications'
 import { formatCurrency, formatDate, TX_ICONS, POSITIVE_TYPES } from '@/utils'
 import styles from './KidDashboard.module.scss'
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+function daysUntil(date: Date): number {
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.ceil((date.getTime() - startOfToday.getTime()) / MS_PER_DAY))
+}
+
 export function KidDashboard() {
   const { t } = useTranslation()
-  const { balance, totalSavings, transactions, savingsGoals, isLoading } = useWalletStore(s => s)
+  const balance = useWalletStore(s => s.balance)
+  const totalSavings = useWalletStore(s => s.totalSavings)
+  const transactions = useWalletStore(s => s.transactions)
+  const savingsGoals = useWalletStore(s => s.savingsGoals)
+  const allowances = useWalletStore(s => s.allowances)
+  const isLoading = useWalletStore(s => s.isLoading)
 
-  if (isLoading) return <Spinner size="lg" fullPage />
+  const recentTx = useMemo(() => transactions.slice(0, 5), [transactions])
+  const activeGoalsCount = useMemo(
+    () => savingsGoals.filter(g => g.status === 'active').length,
+    [savingsGoals]
+  )
 
-  const recentTx = transactions.slice(0, 5)
-  const activeGoals = savingsGoals.filter(g => g.status === 'active')
+  // Seeing when the next allowance lands helps kids plan purchases
+  const nextAllowance = useMemo(() => {
+    const active = allowances.filter(a => a.status === 'active')
+    if (active.length === 0) return null
+    return active.reduce((soonest, a) => (a.nextDueAt < soonest.nextDueAt ? a : soonest))
+  }, [allowances])
+
+  if (isLoading && transactions.length === 0) return <Spinner size="lg" fullPage />
+
+  const nextAllowanceDays = nextAllowance ? daysUntil(nextAllowance.nextDueAt) : 0
+  const nextAllowanceWhen = nextAllowanceDays === 0
+    ? t('kid.nextAllowanceToday')
+    : nextAllowanceDays === 1
+      ? t('kid.nextAllowanceTomorrow')
+      : t('kid.nextAllowanceIn', { count: nextAllowanceDays })
 
   return (
     <div className={styles.page}>
-      <div className={styles.balanceCard}>
+      <NotificationPrompt audience="kid" />
+
+      <section className={styles.balanceCard}>
         <span className={styles.balanceLabel}>{t('kid.balance')}</span>
         <span className={styles.balanceAmount}>{formatCurrency(balance)}</span>
+        <div className={styles.balanceStats}>
+          <Link to="/wallet/savings" className={styles.balanceStat}>
+            <span className={styles.statIcon}>🚀</span>
+            <span className={styles.statText}>
+              <span className={styles.statLabel}>{t('kid.totalSaved')}</span>
+              <span className={styles.statValue}>{formatCurrency(totalSavings)}</span>
+            </span>
+          </Link>
+          <Link to="/wallet/savings" className={styles.balanceStat}>
+            <span className={styles.statIcon}>🎯</span>
+            <span className={styles.statText}>
+              <span className={styles.statLabel}>{t('kid.activeGoals')}</span>
+              <span className={styles.statValue}>{activeGoalsCount}</span>
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      <div className={styles.quickActions}>
+        <Link to="/wallet/savings" className={styles.quickAction}>
+          <span className={[styles.quickIcon, styles.savingsTone].join(' ')}>🐷</span>
+          <span className={styles.quickLabel}>{t('kid.saveMoney')}</span>
+        </Link>
+        <Link to="/wallet/transfer" className={styles.quickAction}>
+          <span className={[styles.quickIcon, styles.transferTone].join(' ')}>💸</span>
+          <span className={styles.quickLabel}>{t('kid.sendMoney')}</span>
+        </Link>
+        <Link to="/wallet/transactions" className={styles.quickAction}>
+          <span className={[styles.quickIcon, styles.historyTone].join(' ')}>📋</span>
+          <span className={styles.quickLabel}>{t('kid.transactions')}</span>
+        </Link>
       </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>{t('kid.savingsSummary')}</h2>
-          <Link to="/wallet/savings" className={styles.sectionLink}>{t('common.edit')}</Link>
-        </div>
-        <div className={styles.savingsBar}>
-          <span className={styles.savingsIcon}>{TX_ICONS.transfer_to_savings}</span>
-          <div className={styles.savingsInfo}>
-            <span className={styles.savingsLabel}>{t('kid.totalSaved')}</span>
-            <span className={styles.savingsAmount}>{formatCurrency(totalSavings)}</span>
+      {nextAllowance && (
+        <div className={styles.allowanceCard}>
+          <span className={styles.allowanceIcon}>📅</span>
+          <div className={styles.allowanceText}>
+            <span className={styles.allowanceLabel}>{t('kid.nextAllowance')}</span>
+            <span className={styles.allowanceWhen}>
+              {nextAllowanceWhen} · {formatDate(nextAllowance.nextDueAt)}
+            </span>
           </div>
-          <span className={styles.goalsCount}>
-            {activeGoals.length} {t('kid.activeGoals')}
-          </span>
+          <span className={styles.allowanceAmount}>+{formatCurrency(nextAllowance.amount)}</span>
         </div>
-      </div>
+      )}
 
-      <div className={styles.section}>
+      <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>{t('kid.recentTransactions')}</h2>
-          <Link to="/wallet/transactions" className={styles.sectionLink}>{t('common.loadMore')}</Link>
+          <Link to="/wallet/transactions" className={styles.sectionLink}>{t('kid.seeAll')}</Link>
         </div>
 
         {recentTx.length > 0 ? (
@@ -71,7 +132,7 @@ export function KidDashboard() {
         ) : (
           <EmptyState emoji="📭" title={t('kid.noTransactions')} />
         )}
-      </div>
+      </section>
     </div>
   )
 }

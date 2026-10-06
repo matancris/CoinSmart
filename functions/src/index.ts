@@ -4,3 +4,4 @@ initializeApp()
 
 export { onTransactionCreated } from './notifications/onTransactionCreated'
 export { transferToChild } from './transfers/transferToChild'
+export { processRecurring } from './scheduled/processRecurring'

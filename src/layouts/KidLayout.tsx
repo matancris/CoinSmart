@@ -35,8 +35,11 @@ export function KidLayout() {
     <div className={styles.layout}>
       <header className={styles.header}>
         <div className={styles.greeting}>
-          <Avatar emoji={appUser?.avatarEmoji ?? '😊'} size="sm" />
-          <span className={styles.name}>{appUser?.displayName}</span>
+          <Avatar emoji={appUser?.avatarEmoji ?? '😊'} size="md" />
+          <div className={styles.hello}>
+            <span className={styles.helloLabel}>{t('kid.hello')}</span>
+            <span className={styles.name}>{appUser?.displayName}</span>
+          </div>
         </div>
         <button className={styles.logoutBtn} onClick={handleLogout}>
           {t('auth.logout')}

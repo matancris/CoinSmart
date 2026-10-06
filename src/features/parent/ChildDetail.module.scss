@@ -3,31 +3,34 @@
 .page {
   @include page-container;
   @include flex-col(6);
+  // The parent layout already pads the content area
+  padding: 0;
   animation: fadeIn $transition-slow;
-
-  @include respond-below(sm) {
-    padding: space(3);
-  }
 }
 
 .backBtn {
   @include interactive;
   @include flex-row(2);
-  @include text($text-sm, $font-medium, $clr-primary);
-  background: none;
-  border: none;
-  padding: 0;
+  @include text($text-sm, $font-semibold, $clr-primary);
   align-self: flex-start;
+  padding: space(2) space(3);
+  background: $clr-surface;
+  border: 1px solid $clr-border-light;
+  border-radius: $radius-full;
+  box-shadow: $shadow-sm;
 
   &:hover {
-    text-decoration: underline;
+    background: $clr-primary-lighter;
   }
 }
 
 .profileCard {
-  @include card;
+  @include card($radius-xl);
   @include flex-col(4);
   padding: space(5);
+  background:
+    radial-gradient(circle at 100% 0, rgba($clr-violet, 0.1), transparent 45%),
+    linear-gradient(180deg, $clr-primary-lighter 0%, $clr-surface 70%);
 
   @include respond-below(sm) {
     padding: space(4);
@@ -120,7 +123,9 @@
       }
 
       .profileBalance {
-        @include text($text-xl, $font-bold, $clr-primary);
+        @include amount;
+        @include text($text-3xl, $font-extrabold, $clr-primary-dark);
+        line-height: 1.15;
       }
 
       .profileSavings {
@@ -132,8 +137,8 @@
   .profileActions {
     @include flex-row(2);
     flex-wrap: wrap;
-    border-block-start: 1px solid $clr-border;
     padding-block-start: space(4);
+    border-block-start: 1px solid rgba($clr-primary, 0.12);
 
     @include respond-below(sm) {
       justify-content: center;
@@ -146,7 +151,7 @@
   @include flex-col(4);
 
   .sectionTitle {
-    @include heading($text-lg);
+    @include section-title;
   }
 }
 
@@ -195,7 +200,8 @@
     }
 
     .goalAmount {
-      @include text($text-sm, $font-bold, $clr-primary);
+      @include amount;
+      @include text($text-base, $font-extrabold, $clr-primary);
     }
   }
 
@@ -224,14 +230,14 @@
 
   .progressBar {
     width: 100%;
-    height: 0.5rem;
+    height: 0.625rem;
     background: $clr-bg-tertiary;
     border-radius: $radius-full;
     overflow: hidden;
 
     .progressFill {
       height: 100%;
-      background: linear-gradient(90deg, $clr-primary, $clr-kid-savings);
+      background: $gradient-primary;
       border-radius: $radius-full;
       transition: width $transition-slow;
     }
@@ -312,7 +318,7 @@
     @include flex-col(1);
     padding: space(3) space(4);
     background: $clr-bg-secondary;
-    border: 2px solid $clr-border;
+    border: 1.5px solid $clr-border;
     border-radius: $radius-md;
     text-align: start;
     cursor: pointer;
@@ -332,8 +338,9 @@
   }
 
   .planOptionSelected {
+    background: $clr-primary-lighter;
     border-color: $clr-primary;
-    background: rgba($clr-primary, 0.05);
+    box-shadow: 0 0 0 3px rgba($clr-primary, 0.12);
   }
 }
 
@@ -358,7 +365,8 @@
       @include flex-col(1);
 
       .allowanceAmount {
-        @include text($text-lg, $font-bold, $clr-primary);
+        @include amount;
+        @include text($text-xl, $font-extrabold, $clr-success);
       }
 
       .allowanceFreq {
@@ -378,8 +386,8 @@
   .allowanceActions {
     @include flex-row(2);
     flex-wrap: wrap;
-    border-block-start: 1px solid $clr-border;
     padding-block-start: space(3);
+    border-block-start: 1px solid $clr-border-light;
   }
 }
 
@@ -392,13 +400,20 @@
 }
 
 .transactionList {
-  @include flex-col(2);
+  @include card;
+  @include flex-col(0);
+  padding: space(1) space(4);
 }
 
 .txRow {
-  @include card-flat;
   @include flex-between;
-  padding: space(3) space(4);
+  padding: space(3) 0;
+  border-block-end: 1px solid $clr-border-light;
+
+  &:last-child {
+    border-block-end: none;
+  }
+
   flex-wrap: wrap;
   gap: space(2);
 
@@ -408,12 +423,8 @@
     flex: 1;
 
     .txIcon {
-      @include flex-center;
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: $radius-full;
+      @include icon-tile(2.5rem);
       font-size: $text-base;
-      flex-shrink: 0;
     }
 
     .txDetails {
@@ -432,6 +443,7 @@
   }
 
   .txAmount {
+    @include amount;
     @include text($text-sm, $font-bold);
     flex-shrink: 0;
 
@@ -457,8 +469,8 @@
 
 // Transaction icon colors from map
 @each $type, $color in $transaction-colors {
-  .txType-#{$type} {
-    background: rgba($color, 0.12);
+  .txRow .txIcon.txType-#{$type} {
     color: $color;
+    background: rgba($color, 0.12);
   }
 }

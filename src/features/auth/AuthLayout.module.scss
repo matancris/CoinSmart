@@ -2,9 +2,12 @@
 
 .layout {
   @include flex-center;
-  min-height: 100vh;
-  background: $clr-bg-primary;
-  padding: space(4);
+  min-height: 100dvh;
+  padding: calc(#{space(4)} + #{$safe-top}) space(4) calc(#{space(4)} + #{$safe-bottom});
+  background:
+    radial-gradient(circle at 15% 10%, rgba($clr-primary, 0.18), transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba($clr-violet, 0.16), transparent 40%),
+    $clr-bg-primary;
 }
 
 .container {
@@ -21,12 +24,23 @@
   text-align: center;
 
   .emoji {
-    font-size: 3.5rem;
+    @include flex-center;
+    width: 5rem;
+    height: 5rem;
+    font-size: 2.75rem;
+    background: $gradient-primary;
+    border-radius: $radius-2xl;
+    box-shadow: $shadow-hero;
+    animation: coinBounce 2.4s ease-in-out infinite;
   }
 
   .title {
     @include heading($text-3xl);
-    color: $clr-primary;
+    margin-block-start: space(2);
+    background: $gradient-primary;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   .tagline {
@@ -35,9 +49,10 @@
 }
 
 .card {
-  @include card($radius-xl);
+  @include card($radius-2xl);
   width: 100%;
   padding: space(6);
+  box-shadow: $shadow-lg;
 }
 
 .form {

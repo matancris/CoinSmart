@@ -6,6 +6,7 @@ import { Avatar, EmptyState, Button } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
 import { formatCurrency, handleError } from '@/utils'
 import { exportService } from '@/services'
+import { NotificationPrompt } from '@/components/notifications'
 import styles from './ParentDashboard.module.scss'
 
 export function ParentDashboard() {
@@ -63,23 +64,28 @@ export function ParentDashboard() {
         </Button>
       </div>
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>👧</span>
-          <span className={styles.statLabel}>{t('parent.totalChildren')}</span>
-          <span className={styles.statValue}>{stats.totalChildren}</span>
+      <NotificationPrompt audience="parent" />
+
+      <section className={styles.heroCard}>
+        <span className={styles.heroLabel}>{t('parent.totalBalance')}</span>
+        <span className={styles.heroAmount}>{formatCurrency(stats.totalBalance)}</span>
+        <div className={styles.heroStats}>
+          <div className={styles.heroStat}>
+            <span className={styles.heroStatIcon}>🚀</span>
+            <span className={styles.heroStatText}>
+              <span className={styles.heroStatLabel}>{t('parent.totalSavings')}</span>
+              <span className={styles.heroStatValue}>{formatCurrency(stats.totalSavings)}</span>
+            </span>
+          </div>
+          <div className={styles.heroStat}>
+            <span className={styles.heroStatIcon}>👧</span>
+            <span className={styles.heroStatText}>
+              <span className={styles.heroStatLabel}>{t('parent.totalChildren')}</span>
+              <span className={styles.heroStatValue}>{stats.totalChildren}</span>
+            </span>
+          </div>
         </div>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>💰</span>
-          <span className={styles.statLabel}>{t('parent.totalBalance')}</span>
-          <span className={styles.statValue}>{formatCurrency(stats.totalBalance)}</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>🚀</span>
-          <span className={styles.statLabel}>{t('parent.totalSavings')}</span>
-          <span className={styles.statValue}>{formatCurrency(stats.totalSavings)}</span>
-        </div>
-      </div>
+      </section>
 
       <div className={styles.familyCodeCard}>
         <div>
@@ -110,7 +116,7 @@ export function ParentDashboard() {
                 <span className={styles.childName}>{child.displayName}</span>
                 <span className={styles.childBalance}>{formatCurrency(child.balance)}</span>
                 <span className={styles.childSavings}>
-                  {t('kid.savings')}: {formatCurrency(child.totalSavings)}
+                  🚀 {formatCurrency(child.totalSavings)}
                 </span>
               </Link>
             ))}

@@ -2,7 +2,7 @@
 
 .layout {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $clr-parent-bg;
   overflow-x: hidden;
 }
@@ -11,8 +11,8 @@
   @include flex-col(0);
   @include custom-scrollbar;
   width: $sidebar-width;
-  background: $clr-parent-sidebar;
   color: $clr-parent-sidebar-text;
+  background: $gradient-sidebar;
   transition: width $transition-base;
   position: fixed;
   inset-block: 0;
@@ -60,11 +60,12 @@
 
 .sidebarHeader {
   @include flex-between;
-  padding: space(5) space(4);
-  border-block-end: 1px solid rgba(255, 255, 255, 0.1);
+  padding: calc(#{$safe-top} + #{space(5)}) space(4) space(5);
+  border-block-end: 1px solid rgba(255, 255, 255, 0.08);
 
   .sidebarTitle {
-    @include text($text-xl, $font-bold, $clr-text-inverse);
+    @include text($text-xl, $font-extrabold, $clr-text-inverse);
+    letter-spacing: -0.02em;
   }
 
   .toggleBtn {
@@ -95,8 +96,8 @@
   @include flex-row(3);
   @include focus-ring($clr-primary-light);
   padding: space(3) space(4);
-  border-radius: $radius-md;
   color: $clr-parent-sidebar-text;
+  border-radius: $radius-md;
   text-decoration: none;
   font-weight: $font-medium;
   font-size: $text-sm;
@@ -110,18 +111,25 @@
   }
 
   &.active {
-    background: rgba($clr-parent-sidebar-active, 0.15);
     color: $clr-parent-sidebar-active;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 3px 0 0 $clr-primary-light;
+
+    [dir='rtl'] & {
+      box-shadow: inset -3px 0 0 $clr-primary-light;
+    }
   }
 
   &:hover:not(.active) {
+    color: $clr-text-inverse;
     background: rgba(255, 255, 255, 0.06);
   }
 }
 
 .sidebarFooter {
   padding: space(4);
-  border-block-start: 1px solid rgba(255, 255, 255, 0.1);
+  padding-block-end: calc(#{space(4)} + #{$safe-bottom});
+  border-block-start: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .content {
@@ -143,9 +151,10 @@
 
 .topBar {
   @include flex-between;
-  padding: space(4) space(6);
-  background: $clr-surface;
-  box-shadow: $shadow-sm;
+  padding: calc(#{$safe-top} + #{space(3)}) space(6) space(3);
+  background: rgba($clr-parent-bg, 0.85);
+  border-block-end: 1px solid rgba($clr-border, 0.5);
+  backdrop-filter: saturate(180%) blur(16px);
   position: sticky;
   top: 0;
   z-index: z(sticky) - 1;
@@ -156,10 +165,11 @@
     display: none;
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: $radius-md;
-    background: $clr-bg-tertiary;
-    border: none;
     font-size: $text-xl;
+    background: $clr-surface;
+    border: 1px solid $clr-border-light;
+    border-radius: $radius-md;
+    box-shadow: $shadow-sm;
 
     @include respond-below(md) {
       display: flex;
@@ -194,7 +204,8 @@
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(15, 20, 40, 0.45);
+    backdrop-filter: blur(2px);
     z-index: z(sticky) - 1;
   }
 }
