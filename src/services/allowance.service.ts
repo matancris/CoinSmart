@@ -1,6 +1,6 @@
 import {
   collection, doc, getDocs, setDoc, updateDoc, deleteDoc,
-  writeBatch, getDoc,
+  getDoc, runTransaction,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import type { Allowance, AllowanceFrequency, AllowanceStatus } from '@/types'
@@ -125,62 +125,62 @@ export async function toggleAllowanceStatus(
   await updateDoc(ref, updates)
 }
 
+// Fallback for when the child opens the app before the hourly server job ran. Runs in a
+// transaction and re-reads each schedule, so it can never pay the same period twice.
 export async function applyAllowancesIfDue(
   userId: string,
   allowances: Allowance[]
 ): Promise<boolean> {
   const now = new Date()
-  const dueAllowances = allowances.filter(a =>
-    a.status === 'active' && a.nextDueAt <= now
-  )
-
-  if (dueAllowances.length === 0) return false
+  const candidates = allowances.filter(a => a.status === 'active' && a.nextDueAt <= now)
+  if (candidates.length === 0) return false
 
   const userRef = doc(db, 'users', userId)
-  const userSnap = await getDoc(userRef)
-  if (!userSnap.exists()) return false
 
-  let balance = (userSnap.data().balance as number) ?? 0
-  const batch = writeBatch(db)
-  let applied = false
+  return runTransaction(db, async (tx) => {
+    const allowanceRefs = candidates.map(a => doc(db, 'users', userId, 'allowances', a.id))
+    const [userSnap, ...allowanceSnaps] = await Promise.all([
+      tx.get(userRef),
+      ...allowanceRefs.map(ref => tx.get(ref)),
+    ])
+    if (!userSnap.exists()) return false
 
-  for (const allowance of dueAllowances) {
-    const periods = countMissedPeriods(allowance, now)
-    if (periods <= 0) continue
+    let balance = (userSnap.data().balance as number) ?? 0
+    let applied = false
 
-    for (let i = 0; i < periods; i++) {
-      balance = Math.round((balance + allowance.amount) * 100) / 100
-      const txRef = doc(collection(db, 'users', userId, 'transactions'))
-      batch.set(txRef, {
-        id: txRef.id,
-        type: 'allowance',
-        amount: allowance.amount,
-        balanceAfter: balance,
-        description: allowance.description,
-        createdAt: new Date(),
-        createdBy: 'system',
-      })
-    }
+    allowanceSnaps.forEach((snap, idx) => {
+      if (!snap.exists()) return
+      const allowance = parseAllowance(snap.id, snap.data() as Record<string, unknown>)
+      if (allowance.status !== 'active' || allowance.nextDueAt > now) return
 
-    const nextDueAt = allowance.frequency === 'every_x_days'
-      ? advanceByDays(allowance.nextDueAt, periods * (allowance.intervalDays ?? 7))
-      : computeNextDueAt(allowance.frequency, now, allowance.intervalDays, allowance.dayOfMonth)
+      const periods = countMissedPeriods(allowance, now)
+      if (periods <= 0) return
 
-    const allowanceRef = doc(db, 'users', userId, 'allowances', allowance.id)
-    batch.update(allowanceRef, {
-      lastExecutedAt: now,
-      nextDueAt,
+      for (let i = 0; i < periods; i++) {
+        balance = Math.round((balance + allowance.amount) * 100) / 100
+        const txRef = doc(collection(db, 'users', userId, 'transactions'))
+        tx.set(txRef, {
+          id: txRef.id,
+          type: 'allowance',
+          amount: allowance.amount,
+          balanceAfter: balance,
+          description: allowance.description,
+          createdAt: now,
+          createdBy: 'system',
+        })
+      }
+
+      const nextDueAt = allowance.frequency === 'every_x_days'
+        ? advanceByDays(allowance.nextDueAt, periods * (allowance.intervalDays ?? 7))
+        : computeNextDueAt(allowance.frequency, now, allowance.intervalDays, allowance.dayOfMonth)
+
+      tx.update(allowanceRefs[idx], { lastExecutedAt: now, nextDueAt })
+      applied = true
     })
 
-    applied = true
-  }
-
-  if (applied) {
-    batch.update(userRef, { balance })
-    await batch.commit()
-  }
-
-  return applied
+    if (applied) tx.update(userRef, { balance })
+    return applied
+  })
 }
 
 export function computeNextDueAt(

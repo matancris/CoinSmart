@@ -13,12 +13,14 @@ export function ParentLayout() {
   const { logout } = useAuthStore(s => s.actions)
   const sidebarOpen = useUIStore(s => s.sidebarOpen)
   const { toggleSidebar } = useUIStore(s => s.actions)
-  const { fetchChildren } = useFamilyStore(s => s.actions)
+  const { subscribeChildren, unsubscribeChildren } = useFamilyStore(s => s.actions)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    if (family?.id) fetchChildren(family.id)
-  }, [family?.id, fetchChildren])
+    if (!family?.id) return
+    subscribeChildren(family.id)
+    return unsubscribeChildren
+  }, [family?.id, subscribeChildren, unsubscribeChildren])
 
   const handleLogout = async () => {
     await logout()

@@ -63,12 +63,8 @@ export function ChildDetail() {
   useEffect(() => {
     if (!childId || !childFamilyId) return
     walletActions.subscribe(childId)
-    return () => {
-      walletActions.unsubscribe()
-      // Balances change while viewing a child — refresh the list so the dashboard isn't stale
-      familyActions.fetchChildren(childFamilyId)
-    }
-  }, [childId, childFamilyId, walletActions, familyActions])
+    return () => walletActions.unsubscribe()
+  }, [childId, childFamilyId, walletActions])
 
   const activeGoals = useMemo(
     () => savingsGoals.filter(g => g.status === 'active'),
@@ -566,34 +562,36 @@ export function ChildDetail() {
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>{t('parent.transactionHistory')}</h2>
-        <div className={styles.transactionList}>
-          {transactions.map(tx => {
-            const isPositive = POSITIVE_TYPES.includes(tx.type)
-            return (
-              <div key={tx.id} className={styles.txRow}>
-                <div className={styles.txInfo}>
-                  <span className={[styles.txIcon, styles[`txType-${tx.type}`]].join(' ')}>
-                    {TX_ICONS[tx.type]}
-                  </span>
-                  <div className={styles.txDetails}>
-                    <span className={styles.txDesc}>
-                      {tx.description || t(`transaction.${tx.type}`)}
+        {transactions.length > 0 && (
+          <div className={styles.transactionList}>
+            {transactions.map(tx => {
+              const isPositive = POSITIVE_TYPES.includes(tx.type)
+              return (
+                <div key={tx.id} className={styles.txRow}>
+                  <div className={styles.txInfo}>
+                    <span className={[styles.txIcon, styles[`txType-${tx.type}`]].join(' ')}>
+                      {TX_ICONS[tx.type]}
                     </span>
-                    <span className={styles.txDate}>{formatDateTime(tx.createdAt)}</span>
+                    <div className={styles.txDetails}>
+                      <span className={styles.txDesc}>
+                        {tx.description || t(`transaction.${tx.type}`)}
+                      </span>
+                      <span className={styles.txDate}>{formatDateTime(tx.createdAt)}</span>
+                    </div>
+                  </div>
+                  <span className={[styles.txAmount, isPositive ? styles.positive : styles.negative].join(' ')}>
+                    {isPositive ? '+' : '-'}{formatCurrency(tx.amount)}
+                  </span>
+                  <div className={styles.txActions}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteTx(tx.id)}>
+                      {t('common.delete')}
+                    </Button>
                   </div>
                 </div>
-                <span className={[styles.txAmount, isPositive ? styles.positive : styles.negative].join(' ')}>
-                  {isPositive ? '+' : '-'}{formatCurrency(tx.amount)}
-                </span>
-                <div className={styles.txActions}>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteTx(tx.id)}>
-                    {t('common.delete')}
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
 
         {transactions.length === 0 && (
           <EmptyState emoji="📭" title={t('kid.noTransactions')} />

@@ -1,6 +1,7 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
+import { logger } from 'firebase-functions/v2'
 
 const db = getFirestore()
 const messaging = getMessaging()
@@ -21,21 +22,50 @@ interface UserData {
   fcmTokens?: string[]
 }
 
+// FCM requires an absolute HTTPS link for notification clicks
+const APP_URL = process.env.APP_URL ?? `https://${process.env.GCLOUD_PROJECT}.web.app`
+
+interface NotificationContent {
+  title: string
+  body: string
+  // App path to open when the notification is tapped
+  path: string
+  // Notifications with the same tag replace each other instead of stacking
+  tag: string
+}
+
 async function sendNotification(
   recipientId: string,
-  title: string,
-  body: string,
+  { title, body, path, tag }: NotificationContent,
 ): Promise<void> {
   const userSnap = await db.doc(`users/${recipientId}`).get()
   if (!userSnap.exists) return
 
   const userData = userSnap.data() as UserData
-  const tokens = userData.fcmTokens
-  if (!tokens || tokens.length === 0) return
+  const tokens = [...new Set(userData.fcmTokens ?? [])]
+  if (tokens.length === 0) return
 
+  const link = `${APP_URL}${path}`
+
+  // A notification payload (not data-only) lets the browser display it even when the
+  // service worker was killed, and iOS revokes push permission after silent pushes
   const response = await messaging.sendEachForMulticast({
     tokens,
-    data: { title, body },
+    data: { title, body, link, tag },
+    webpush: {
+      headers: { Urgency: 'high', TTL: String(24 * 60 * 60) },
+      notification: {
+        title,
+        body,
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-64x64.png',
+        dir: 'rtl',
+        lang: 'he',
+        tag,
+        renotify: true,
+      },
+      fcmOptions: { link },
+    },
   })
 
   // Prune stale tokens
@@ -48,6 +78,8 @@ async function sendNotification(
         code === 'messaging/registration-token-not-registered'
       ) {
         staleTokens.push(tokens[idx])
+      } else {
+        logger.warn('FCM send failed', { recipientId, code })
       }
     }
   })
@@ -59,6 +91,19 @@ async function sendNotification(
   }
 }
 
+async function getFamilyParentIds(familyId: string): Promise<string[]> {
+  const parentsSnap = await db
+    .collection('users')
+    .where('familyId', '==', familyId)
+    .where('role', '==', 'parent')
+    .get()
+  return parentsSnap.docs.map(d => d.id)
+}
+
+function formatAmount(amount: number): string {
+  return `₪${amount.toLocaleString('he-IL', { maximumFractionDigits: 2 })}`
+}
+
 export const onTransactionCreated = onDocumentCreated(
   'users/{userId}/transactions/{txId}',
   async (event) => {
@@ -67,46 +112,62 @@ export const onTransactionCreated = onDocumentCreated(
 
     const tx = snapshot.data() as TransactionData
     const userId = event.params.userId
+    const amount = formatAmount(tx.amount)
 
     // Deposit from parent → notify child
     if (tx.type === 'deposit' && tx.createdBy !== userId) {
-      await sendNotification(
-        userId,
-        'הפקדה חדשה!',
-        `קיבלת ₪${tx.amount} לארנק שלך`,
-      )
+      await sendNotification(userId, {
+        title: 'הפקדה חדשה! 💰',
+        body: `קיבלת ${amount} לארנק שלך`,
+        path: '/wallet',
+        tag: `deposit-${event.params.txId}`,
+      })
+      return
+    }
+
+    // Scheduled allowance → notify child
+    if (tx.type === 'allowance') {
+      await sendNotification(userId, {
+        title: 'דמי כיס הגיעו! 🎉',
+        body: `${amount} נכנסו לארנק שלך${tx.description ? ` — ${tx.description}` : ''}`,
+        path: '/wallet',
+        tag: 'allowance',
+      })
+      return
+    }
+
+    // Monthly interest → notify child, it's the moment saving pays off
+    if (tx.type === 'interest' && tx.createdBy === 'system') {
+      await sendNotification(userId, {
+        title: 'החיסכון שלך גדל! 🚀',
+        body: `הרווחת ${amount} ריבית${tx.description ? ` על "${tx.description}"` : ''}`,
+        path: '/wallet/savings',
+        tag: 'interest',
+      })
       return
     }
 
     // Transfer received from sibling → notify recipient child + all parents
     if (tx.type === 'transfer_in' && tx.recipientName) {
-      // Notify the recipient child (userId is the recipient)
-      await sendNotification(
-        userId,
-        'העברה חדשה!',
-        `קיבלת ₪${tx.amount} מ${tx.recipientName}`,
-      )
+      await sendNotification(userId, {
+        title: 'העברה חדשה! 🎁',
+        body: `קיבלת ${amount} מ${tx.recipientName}`,
+        path: '/wallet',
+        tag: `transfer-${event.params.txId}`,
+      })
 
-      // Notify all parents about the transfer
       const recipientSnap = await db.doc(`users/${userId}`).get()
       if (recipientSnap.exists) {
         const recipientData = recipientSnap.data() as UserData
-
-        const parentsSnap = await db
-          .collection('users')
-          .where('familyId', '==', recipientData.familyId)
-          .where('role', '==', 'parent')
-          .get()
-
-        const promises = parentsSnap.docs.map((parentDoc) =>
-          sendNotification(
-            parentDoc.id,
-            'העברה בין ילדים',
-            `${tx.recipientName} שלח/ה ₪${tx.amount} ל${recipientData.displayName}`,
-          ),
-        )
-
-        await Promise.all(promises)
+        const parentIds = await getFamilyParentIds(recipientData.familyId)
+        await Promise.all(parentIds.map(parentId =>
+          sendNotification(parentId, {
+            title: 'העברה בין ילדים',
+            body: `${tx.recipientName} שלח/ה ${amount} ל${recipientData.displayName}`,
+            path: `/manage/children/${userId}`,
+            tag: `transfer-${event.params.txId}`,
+          }),
+        ))
       }
       return
     }
@@ -122,22 +183,16 @@ export const onTransactionCreated = onDocumentCreated(
       const childData = userSnap.data() as UserData
       if (childData.role !== 'child') return
 
-      const parentsSnap = await db
-        .collection('users')
-        .where('familyId', '==', childData.familyId)
-        .where('role', '==', 'parent')
-        .get()
-
+      const parentIds = await getFamilyParentIds(childData.familyId)
       const desc = tx.description ? ` — ${tx.description}` : ''
-      const promises = parentsSnap.docs.map((parentDoc) =>
-        sendNotification(
-          parentDoc.id,
-          'הוצאה חדשה',
-          `${childData.displayName} הוציא/ה ₪${tx.amount}${desc}`,
-        ),
-      )
-
-      await Promise.all(promises)
+      await Promise.all(parentIds.map(parentId =>
+        sendNotification(parentId, {
+          title: 'הוצאה חדשה',
+          body: `${childData.displayName} הוציא/ה ${amount}${desc}`,
+          path: `/manage/children/${userId}`,
+          tag: `expense-${event.params.txId}`,
+        }),
+      ))
     }
   },
 )
