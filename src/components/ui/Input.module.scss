@@ -1,43 +1,50 @@
+@use 'sass:color';
 @use '@/styles' as *;
 
 .wrapper {
-  @include flex-col(1);
+  @include flex-col(2);
 
   .label {
-    @include text($text-sm, $font-medium, $clr-text-secondary);
+    @include text($text-sm, $font-semibold, $clr-text-secondary);
   }
 
   .input {
     width: 100%;
-    padding: space(2) space(3);
+    min-height: 3rem;
+    padding: space(3) space(4);
     font-size: $text-base;
     font-family: inherit;
     color: $clr-text-primary;
-    background: $clr-surface;
-    border: 1px solid $clr-border;
+    background: $clr-bg-tertiary;
+    border: 1.5px solid transparent;
     border-radius: $radius-md;
-    transition: border-color $transition-base, box-shadow $transition-base;
     outline: none;
+    transition: border-color $transition-base, box-shadow $transition-base, background $transition-base;
 
     &::placeholder {
       color: $clr-text-tertiary;
     }
 
+    &:hover:not(:focus) {
+      background: color.mix($clr-bg-tertiary, $clr-border, 70%);
+    }
+
     &:focus {
+      background: $clr-surface;
       border-color: $clr-primary;
-      box-shadow: 0 0 0 3px rgba($clr-primary, 0.1);
+      box-shadow: 0 0 0 4px rgba($clr-primary, 0.12);
     }
 
     &.error {
       border-color: $clr-danger;
 
       &:focus {
-        box-shadow: 0 0 0 3px rgba($clr-danger, 0.1);
+        box-shadow: 0 0 0 4px rgba($clr-danger, 0.12);
       }
     }
   }
 
   .errorText {
-    @include text($text-xs, $font-regular, $clr-danger);
+    @include text($text-xs, $font-medium, $clr-danger);
   }
 }

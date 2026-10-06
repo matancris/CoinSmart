@@ -2,33 +2,47 @@
 
 .layout {
   @include flex-col(0);
-  min-height: 100vh;
-  background: $clr-kid-bg;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 100% 0, rgba($clr-violet, 0.08), transparent 40%),
+    radial-gradient(circle at 0 10%, rgba($clr-primary, 0.08), transparent 45%),
+    $clr-kid-bg;
 }
 
 .header {
   @include flex-between;
-  padding: space(4);
-  background: $clr-surface;
-  box-shadow: $shadow-sm;
   position: sticky;
   top: 0;
   z-index: z(sticky);
+  padding: calc(#{$safe-top} + #{space(3)}) space(4) space(3);
+  background: rgba($clr-kid-bg, 0.8);
+  backdrop-filter: saturate(180%) blur(16px);
 
   .greeting {
     @include flex-row(3);
 
+    .hello {
+      @include flex-col(0);
+    }
+
+    .helloLabel {
+      @include text($text-xs, $font-medium, $clr-text-secondary);
+    }
+
     .name {
       @include text($text-lg, $font-bold, $clr-text-primary);
+      line-height: 1.2;
     }
   }
 
   .logoutBtn {
     @include interactive;
-    @include text($text-sm, $font-medium, $clr-text-secondary);
-    background: none;
-    border: none;
-    padding: space(2);
+    @include text($text-sm, $font-semibold, $clr-text-secondary);
+    padding: space(2) space(3);
+    background: $clr-surface;
+    border: 1px solid $clr-border-light;
+    border-radius: $radius-full;
+    box-shadow: $shadow-sm;
 
     &:hover {
       color: $clr-danger;
@@ -38,43 +52,59 @@
 
 .main {
   flex: 1;
-  padding-block-end: $bottom-nav-height;
+  padding-block-end: calc(#{$bottom-nav-height} + #{space(6)} + #{$safe-bottom});
 }
 
+// Floating pill nav — keeps content visible behind it and is easy to hit with a thumb
 .bottomNav {
-  position: fixed;
-  bottom: 0;
-  inset-inline: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: $clr-surface;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  position: fixed;
+  inset-block-end: calc(#{space(3)} + #{$safe-bottom});
+  inset-inline: space(3);
   z-index: z(sticky);
+  max-width: calc(#{$kid-max-width} - #{space(4)});
   height: $bottom-nav-height;
+  margin-inline: auto;
+  padding: space(1);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba($clr-border, 0.6);
+  border-radius: $radius-2xl;
+  box-shadow: 0 12px 32px -12px rgba(21, 26, 48, 0.25);
+  backdrop-filter: saturate(180%) blur(16px);
 }
 
 .navItem {
   @include interactive;
-  @include flex-col(1);
+  @include flex-col(0);
   @include focus-ring;
+  @include pressable;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
   font-size: $text-xs;
   color: $clr-text-tertiary;
   text-decoration: none;
-  padding: space(1) 0;
+  border-radius: $radius-xl;
 
   .navIcon {
     font-size: $text-xl;
+    filter: grayscale(0.6);
+    opacity: 0.75;
+    transition: transform $transition-spring, filter $transition-base, opacity $transition-base;
   }
 
   .navLabel {
-    font-weight: $font-medium;
+    font-weight: $font-semibold;
   }
 
   &.active {
     color: $clr-primary;
+    background: $clr-primary-lighter;
+
+    .navIcon {
+      filter: none;
+      opacity: 1;
+      transform: translateY(-1px) scale(1.12);
+    }
   }
 }

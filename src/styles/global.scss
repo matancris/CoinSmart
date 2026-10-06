@@ -49,7 +49,7 @@
   --clr-parent-sidebar-text: #{vars.$clr-parent-sidebar-text};
   --clr-parent-sidebar-active: #{vars.$clr-parent-sidebar-active};
 
-  --font-family: 'Heebo', sans-serif;
+  --font-family: 'Heebo', system-ui, -apple-system, sans-serif;
   --transition-fast: #{vars.$transition-fast};
   --transition-base: #{vars.$transition-base};
   --transition-slow: #{vars.$transition-slow};
@@ -69,6 +69,7 @@ html {
 }
 
 body {
+  min-height: 100dvh;
   font-family: var(--font-family);
   font-weight: #{vars.$font-regular};
   color: var(--clr-text-primary);
@@ -76,6 +77,12 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: rgba(vars.$clr-primary, 0.18);
 }
 
 a {

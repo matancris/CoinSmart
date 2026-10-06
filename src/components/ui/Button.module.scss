@@ -5,15 +5,18 @@
   @include interactive;
   @include focus-ring;
   @include flex-center;
+  @include pressable;
   gap: space(2);
+  min-height: 2.75rem;
   font-family: inherit;
   font-weight: $font-semibold;
   border: none;
   border-radius: $radius-md;
-  transition: all $transition-base;
+  transition: background $transition-base, color $transition-base, box-shadow $transition-base, transform $transition-fast;
   white-space: nowrap;
 
   &.sm {
+    min-height: 2.25rem;
     padding: space(1) space(3);
     font-size: $text-sm;
     border-radius: $radius-sm;
@@ -25,46 +28,49 @@
   }
 
   &.lg {
+    min-height: 3.25rem;
     padding: space(3) space(6);
     font-size: $text-lg;
     border-radius: $radius-lg;
   }
 
   &.primary {
-    background: $clr-primary;
     color: $clr-text-inverse;
+    background: $gradient-primary;
+    box-shadow: $shadow-primary;
 
     &:hover:not(:disabled) {
-      background: $clr-primary-dark;
+      box-shadow: 0 10px 24px -6px rgba($clr-primary, 0.65);
+      filter: brightness(1.05);
     }
   }
 
   &.secondary {
+    color: $clr-primary-dark;
     background: $clr-primary-lighter;
-    color: $clr-primary;
 
     &:hover:not(:disabled) {
-      background: $clr-primary-light;
-      color: $clr-text-inverse;
+      background: color.adjust($clr-primary-lighter, $lightness: -3%);
     }
   }
 
   &.danger {
-    background: $clr-danger;
     color: $clr-text-inverse;
+    background: $clr-danger;
+    box-shadow: 0 8px 20px -8px rgba($clr-danger, 0.6);
 
     &:hover:not(:disabled) {
-      background: color.adjust($clr-danger, $lightness: -10%);
+      background: color.adjust($clr-danger, $lightness: -6%);
     }
   }
 
   &.ghost {
-    background: transparent;
     color: $clr-text-secondary;
+    background: transparent;
 
     &:hover:not(:disabled) {
-      background: $clr-bg-tertiary;
       color: $clr-text-primary;
+      background: $clr-bg-tertiary;
     }
   }
 

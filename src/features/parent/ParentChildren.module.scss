@@ -3,6 +3,7 @@
 .page {
   @include page-container;
   @include flex-col(6);
+  padding: 0;
   animation: fadeIn $transition-slow;
 }
 
@@ -34,7 +35,8 @@
       }
 
       .balance {
-        @include text($text-sm, $font-medium, $clr-primary);
+        @include amount;
+        @include text($text-base, $font-bold, $clr-primary);
       }
     }
   }

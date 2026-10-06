@@ -1,60 +1,94 @@
 @use '@/styles' as *;
 
 .container {
-  position: fixed;
-  top: space(4);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: z(toast);
   @include flex-col(2);
+  position: fixed;
+  inset-block-start: calc(#{$safe-top} + #{space(3)});
+  inset-inline: 0;
+  z-index: z(toast);
   align-items: center;
+  padding-inline: space(3);
   pointer-events: none;
 }
 
 .toast {
   @include flex-row(3);
-  padding: space(3) space(5);
+  width: 100%;
+  max-width: rem(420);
+  padding: space(3) space(4);
+  color: $clr-text-primary;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid $clr-border-light;
   border-radius: $radius-lg;
   box-shadow: $shadow-lg;
-  animation: slideUp $transition-spring;
+  backdrop-filter: blur(12px);
   pointer-events: auto;
-  min-width: rem(200);
-  max-width: rem(400);
+  animation: slideDown $transition-spring;
+
+  .icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    font-size: $text-sm;
+    font-weight: $font-bold;
+    border-radius: $radius-full;
+  }
+
+  .content {
+    @include flex-col(0);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .title {
+    @include text($text-sm, $font-bold, $clr-text-primary);
+  }
 
   .message {
-    @include text($text-sm, $font-medium);
-    flex: 1;
+    @include text($text-sm, $font-medium, $clr-text-secondary);
   }
 
   .closeBtn {
     @include interactive;
-    color: inherit;
-    opacity: 0.6;
+    @include flex-center;
+    width: 1.75rem;
+    height: 1.75rem;
     font-size: $text-lg;
     line-height: 1;
+    color: $clr-text-tertiary;
+    border-radius: $radius-full;
 
     &:hover {
-      opacity: 1;
+      color: $clr-text-primary;
+      background: $clr-bg-tertiary;
     }
   }
 
-  &.success {
+  &.success .icon {
+    color: $clr-text-inverse;
     background: $clr-success;
-    color: $clr-text-inverse;
   }
 
-  &.error {
+  &.error .icon {
+    color: $clr-text-inverse;
     background: $clr-danger;
-    color: $clr-text-inverse;
   }
 
-  &.info {
-    background: $clr-primary;
-    color: $clr-text-inverse;
+  &.info .icon {
+    background: $clr-primary-lighter;
   }
 
-  &.warning {
-    background: $clr-warning;
+  &.warning .icon {
     color: $clr-text-primary;
+    background: $clr-warning-light;
+  }
+
+  &.success,
+  &.error,
+  &.warning {
+    .message {
+      color: $clr-text-primary;
+    }
   }
 }

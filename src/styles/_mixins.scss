@@ -47,6 +47,7 @@ $breakpoints: (sm: 480px, md: 768px, lg: 1024px, xl: 1280px);
   font-weight: vars.$font-bold;
   color: vars.$clr-text-primary;
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 @mixin truncate($lines: 1) {
@@ -64,9 +65,10 @@ $breakpoints: (sm: 480px, md: 768px, lg: 1024px, xl: 1280px);
 
 @mixin card($radius: vars.$radius-lg) {
   background: vars.$clr-surface;
+  border: 1px solid rgba(vars.$clr-border, 0.7);
   border-radius: $radius;
   box-shadow: vars.$shadow-card;
-  transition: box-shadow vars.$transition-base;
+  transition: box-shadow vars.$transition-base, transform vars.$transition-base;
 
   &:hover {
     box-shadow: vars.$shadow-card-hover;
@@ -82,6 +84,7 @@ $breakpoints: (sm: 480px, md: 768px, lg: 1024px, xl: 1280px);
 @mixin interactive {
   cursor: pointer;
   transition: all vars.$transition-base;
+  -webkit-tap-highlight-color: transparent;
 
   &:disabled {
     opacity: 0.6;
@@ -120,4 +123,74 @@ $breakpoints: (sm: 480px, md: 768px, lg: 1024px, xl: 1280px);
 @mixin kid-page {
   @include page-container(vars.$kid-max-width);
   padding: fn.space(4);
+}
+
+// Money reads better when digits don't jump around as values change
+@mixin amount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@mixin pressable {
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+// Large gradient card used for the main balance on dashboards
+@mixin hero-card($gradient: vars.$gradient-primary) {
+  position: relative;
+  overflow: hidden;
+  color: vars.$clr-text-inverse;
+  background: $gradient;
+  border-radius: vars.$radius-2xl;
+  box-shadow: vars.$shadow-hero;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: vars.$radius-full;
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+  }
+
+  &::before {
+    inset-block-start: -40%;
+    inset-inline-end: -15%;
+    width: 16rem;
+    height: 16rem;
+  }
+
+  &::after {
+    inset-block-end: -50%;
+    inset-inline-start: -10%;
+    width: 12rem;
+    height: 12rem;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@mixin icon-tile($size: 2.5rem, $bg: vars.$clr-primary-lighter, $color: vars.$clr-primary) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: $size;
+  height: $size;
+  color: $color;
+  background: $bg;
+  border-radius: vars.$radius-md;
+}
+
+@mixin section-title {
+  font-size: vars.$text-lg;
+  font-weight: vars.$font-bold;
+  color: vars.$clr-text-primary;
+  letter-spacing: -0.01em;
 }

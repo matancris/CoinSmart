@@ -10,7 +10,7 @@
   @include flex-between;
 
   .title {
-    @include heading($text-xl);
+    @include heading($text-2xl);
   }
 }
 
@@ -27,11 +27,12 @@
     @include flex-between;
 
     .goalName {
-      @include text($text-base, $font-semibold, $clr-text-primary);
+      @include text($text-base, $font-bold, $clr-text-primary);
     }
 
     .goalAmount {
-      @include text($text-sm, $font-bold, $clr-kid-savings);
+      @include amount;
+      @include text($text-lg, $font-extrabold, $clr-kid-savings);
     }
   }
 
@@ -60,14 +61,14 @@
 
   .progressBar {
     width: 100%;
-    height: 0.5rem;
+    height: 0.625rem;
     background: $clr-bg-tertiary;
     border-radius: $radius-full;
     overflow: hidden;
 
     .progressFill {
       height: 100%;
-      background: linear-gradient(90deg, $clr-primary, $clr-kid-savings);
+      background: $gradient-primary;
       border-radius: $radius-full;
       transition: width $transition-slow;
     }
@@ -147,7 +148,7 @@
     @include flex-col(1);
     padding: space(3) space(4);
     background: $clr-bg-secondary;
-    border: 2px solid $clr-border;
+    border: 1.5px solid $clr-border;
     border-radius: $radius-md;
     text-align: start;
     cursor: pointer;
@@ -167,7 +168,8 @@
   }
 
   .planOptionSelected {
+    background: $clr-primary-lighter;
     border-color: $clr-primary;
-    background: rgba($clr-primary, 0.05);
+    box-shadow: 0 0 0 3px rgba($clr-primary, 0.12);
   }
 }

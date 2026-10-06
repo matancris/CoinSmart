@@ -2,16 +2,17 @@
 
 .avatar {
   @include flex-center;
-  border-radius: $radius-full;
-  font-size: $text-2xl;
-  user-select: none;
   flex-shrink: 0;
-  background: $clr-primary-lighter;
+  font-size: $text-2xl;
+  background: linear-gradient(145deg, #F1F3FF 0%, #E3E8FF 100%);
+  border-radius: $radius-full;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9), 0 2px 6px -2px rgba($clr-primary, 0.3);
+  user-select: none;
 
   &.sm {
-    width: 2rem;
-    height: 2rem;
-    font-size: $text-base;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: $text-lg;
   }
 
   &.md {
@@ -21,14 +22,14 @@
   }
 
   &.lg {
-    width: 3.5rem;
-    height: 3.5rem;
-    font-size: $text-2xl;
+    width: 3.75rem;
+    height: 3.75rem;
+    font-size: $text-3xl;
   }
 
   &.xl {
-    width: 5rem;
-    height: 5rem;
+    width: 5.5rem;
+    height: 5.5rem;
     font-size: $text-4xl;
   }
 }
