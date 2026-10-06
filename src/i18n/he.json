@@ -53,7 +53,13 @@
     "sendToSibling": "שלח לאח/ות",
     "selectSibling": "בחר אח/ות",
     "noSiblings": "אין אחים/אחיות",
-    "sendMoney": "שלח כסף"
+    "sendMoney": "שלח כסף",
+    "hello": "היי 👋",
+    "nextAllowance": "דמי הכיס הבאים",
+    "nextAllowanceIn": "בעוד {{count}} ימים",
+    "nextAllowanceTomorrow": "מחר",
+    "nextAllowanceToday": "היום",
+    "seeAll": "הכל"
   },
   "parent": {
     "dashboard": "לוח בקרה",
@@ -200,5 +206,14 @@
     "everyDay": "כל יום",
     "everyXDaysLabel": "כל {{days}} ימים",
     "monthlyOnDay": "בכל {{day}} לחודש"
+  },
+  "notifications": {
+    "enableTitle": "להפעיל התראות?",
+    "enableKid": "נודיע לך כשמגיעים דמי כיס, הפקדות והעברות 🎉",
+    "enableParent": "נעדכן אותך כשהילדים מוציאים או מעבירים כסף",
+    "enable": "הפעלה",
+    "later": "אחר כך",
+    "enabled": "ההתראות הופעלו",
+    "blocked": "ההתראות חסומות בהגדרות הדפדפן"
   }
 }

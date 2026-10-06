@@ -1,0 +1,36 @@
+@use '@/styles' as *;
+
+.prompt {
+  @include card;
+  @include flex-row(3);
+  flex-wrap: wrap;
+  padding: space(4);
+  background: linear-gradient(135deg, $clr-primary-lighter 0%, #F5F0FF 100%);
+  border-color: rgba($clr-primary, 0.15);
+  animation: slideDown $transition-slow;
+
+  .icon {
+    @include icon-tile(2.75rem, $clr-surface);
+    font-size: $text-xl;
+    box-shadow: $shadow-sm;
+  }
+
+  .text {
+    @include flex-col(0);
+    flex: 1;
+    min-width: rem(180);
+  }
+
+  .title {
+    @include text($text-base, $font-bold, $clr-text-primary);
+  }
+
+  .description {
+    @include text($text-sm, $font-regular, $clr-text-secondary);
+  }
+
+  .actions {
+    @include flex-row(1);
+    margin-inline-start: auto;
+  }
+}

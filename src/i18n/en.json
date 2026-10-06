@@ -53,7 +53,13 @@
     "sendToSibling": "Send to Sibling",
     "selectSibling": "Select Sibling",
     "noSiblings": "No siblings",
-    "sendMoney": "Send Money"
+    "sendMoney": "Send Money",
+    "hello": "Hi 👋",
+    "nextAllowance": "Next allowance",
+    "nextAllowanceIn": "in {{count}} days",
+    "nextAllowanceTomorrow": "tomorrow",
+    "nextAllowanceToday": "today",
+    "seeAll": "See all"
   },
   "parent": {
     "dashboard": "Dashboard",
@@ -200,5 +206,14 @@
     "everyDay": "Every day",
     "everyXDaysLabel": "Every {{days}} days",
     "monthlyOnDay": "Monthly on the {{day}}th"
+  },
+  "notifications": {
+    "enableTitle": "Turn on notifications?",
+    "enableKid": "We'll let you know when allowance, deposits and transfers arrive 🎉",
+    "enableParent": "We'll tell you when your kids spend or transfer money",
+    "enable": "Turn on",
+    "later": "Later",
+    "enabled": "Notifications are on",
+    "blocked": "Notifications are blocked in your browser settings"
   }
 }

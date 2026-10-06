@@ -19,17 +19,38 @@ firebase.initializeApp({
 
 firebase.messaging()
 
+// Firebase displays background notifications and forwards foreground ones to the open page.
+// Safari revokes push permission when a push shows no notification, so there we always show it.
+const ua = self.navigator.userAgent
+const isAppleWebKit = /iPhone|iPad|iPod|Macintosh/.test(ua)
+  && /AppleWebKit/.test(ua)
+  && !/Chrome|CriOS|FxiOS|EdgiOS|Android/.test(ua)
+
 self.addEventListener('push', (event) => {
-  const payload = event.data?.json()
-  if (payload?.notification) return
-  const title = payload?.data?.title
-  const body = payload?.data?.body ?? ''
-  if (!title) return
+  if (!isAppleWebKit || !event.data) return
+  let payload
+  try {
+    payload = event.data.json()
+  } catch {
+    return
+  }
+  const notification = payload && payload.notification
+  if (!notification || !notification.title) return
+
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/pwa-192x192.png',
-      dir: 'rtl',
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const hasVisibleClient = clients.some((client) => client.visibilityState === 'visible')
+      if (!hasVisibleClient) return
+      return self.registration.showNotification(notification.title, {
+        body: notification.body || '',
+        icon: notification.icon || '/pwa-192x192.png',
+        badge: notification.badge,
+        tag: notification.tag,
+        dir: 'rtl',
+        lang: 'he',
+        // Lets Firebase's click handler open the link from fcmOptions
+        data: { FCM_MSG: payload },
+      })
     })
   )
 })
@@ -68,8 +89,8 @@ export default defineConfig({
         name: 'CoinSmart - ארנק דיגיטלי לילדים',
         short_name: 'CoinSmart',
         description: 'ארנק דיגיטלי חכם לילדים, בניהול ההורים',
-        theme_color: '#4F8CF7',
-        background_color: '#F8FAFC',
+        theme_color: '#4F6EF7',
+        background_color: '#F4F6FB',
         display: 'standalone',
         orientation: 'portrait',
         dir: 'rtl',
