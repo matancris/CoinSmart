@@ -4,7 +4,7 @@ import { authorizeForChild } from '../shared/access'
 import { loadFamilyPins } from '../shared/pins'
 import { processChild } from '../scheduled/processRecurring'
 
-// Pays anything due right away when the wallet opens, instead of waiting for the hourly job
+// Pays anything due right away when the wallet opens, instead of waiting for the daily job
 export const syncWallet = onCall<{ userId?: unknown }>(async (request) => {
   const { userId } = request.data ?? {}
   const { caller } = await authorizeForChild(request.auth, userId)

@@ -6,7 +6,7 @@ const v2_1 = require("firebase-functions/v2");
 const access_1 = require("../shared/access");
 const pins_1 = require("../shared/pins");
 const processRecurring_1 = require("../scheduled/processRecurring");
-// Pays anything due right away when the wallet opens, instead of waiting for the hourly job
+// Pays anything due right away when the wallet opens, instead of waiting for the daily job
 exports.syncWallet = (0, https_1.onCall)(async (request) => {
     const { userId } = request.data ?? {};
     const { caller } = await (0, access_1.authorizeForChild)(request.auth, userId);

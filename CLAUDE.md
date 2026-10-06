@@ -123,13 +123,13 @@ src/
 - **Children**: family code (6-char) → select child → 4-digit PIN → Firebase Anonymous Auth
   - The PIN is verified server-side by the `childLogin` Cloud Function, which writes `childSessions/{anonUid}` linking the anonymous sign-in to the child. Firestore rules grant child access only through that doc.
   - PIN hashes live in `families/{id}/pins` (no client access). Never put them in `loginProfiles`.
+- Auth state managed in `useAuthStore`, includes `appUser`, `family`, `isInitialized`
 
 ## Money & Security
 
 - Anything that changes a balance, savings goal or PIN runs in a Cloud Function (`functions/src/`), never as a client Firestore write. The client calls it via `httpsCallable` from a service.
 - Firestore rules block clients from writing `balance`, `role`, `familyId`, transactions and savings, with one exception: parents may set a child's balance and edit or delete transactions.
 - `SAVINGS_PLANS` is duplicated in `functions/src/wallet/savings.ts`, and the server copy is the one that counts. Keep the two in sync.
-- Auth state managed in `useAuthStore`, includes `appUser`, `family`, `isInitialized`
 
 ## i18n
 
@@ -163,3 +163,8 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
+
+## Git Branches
+
+- Name every new branch after the feature it delivers, in kebab-case with a type prefix: `feature/auto-allowances`, `fix/push-notifications`, `design/dashboard-refresh`
+- Never use random or auto-generated names (e.g. `claude/funny-wright-9dgqcf`) — if a session is assigned one, create a descriptive branch instead and push to that

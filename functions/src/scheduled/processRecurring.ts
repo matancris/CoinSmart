@@ -252,8 +252,9 @@ export async function processChild(userId: string, now: Date): Promise<{ allowan
 
 export const processRecurring = onSchedule(
   {
-    // Hourly, so a midnight allowance lands within the hour even if nobody opens the app
-    schedule: '5 * * * *',
+    // Allowances fall due at local midnight, so one run just after it pays them on the right
+    // day while keeping usage far inside the free tier; opening the app covers anything earlier
+    schedule: '5 0 * * *',
     timeZone: TIME_ZONE,
     retryCount: 2,
   },
