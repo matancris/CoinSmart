@@ -155,3 +155,8 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
+
+## Git Branches
+
+- Name every new branch after the feature it delivers, in kebab-case with a type prefix: `feature/auto-allowances`, `fix/push-notifications`, `design/dashboard-refresh`
+- Never use random or auto-generated names (e.g. `claude/funny-wright-9dgqcf`) — if a session is assigned one, create a descriptive branch instead and push to that
