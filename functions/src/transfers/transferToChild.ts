@@ -1,7 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { getFirestore } from 'firebase-admin/firestore'
-
-const db = getFirestore()
+import { db, getChildSession, requireDocId } from '../shared/access'
 
 interface TransferRequest {
   senderId: string
@@ -26,14 +24,16 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
     throw new HttpsError('invalid-argument', 'Amount must be positive')
   }
+  requireDocId(senderId)
+  requireDocId(recipientId)
   if (senderId === recipientId) {
     throw new HttpsError('invalid-argument', 'Cannot transfer to yourself')
   }
 
+  const session = await getChildSession(callerUid)
   const senderRef = db.doc(`users/${senderId}`)
   const recipientRef = db.doc(`users/${recipientId}`)
   const now = new Date()
-  const description = note?.trim().slice(0, 200) || recipientName
   const sanitizedNote = note?.trim().slice(0, 500)
 
   // Read and write inside one transaction so concurrent transfers can't overdraw the sender
@@ -50,8 +50,8 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
     const senderData = senderSnap.data()!
     const recipientData = recipientSnap.data()!
 
-    // Children sign in anonymously; their session UID is stamped on the user doc as lastAuthUid
-    if (callerUid !== senderId && senderData.lastAuthUid !== callerUid) {
+    // Only the sending child's own session may move their money
+    if (session?.userId !== senderId || senderData.isActive === false) {
       throw new HttpsError('permission-denied', 'errors.generic')
     }
 
@@ -66,6 +66,11 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
     if (senderData.canTransferToSiblings === false) {
       throw new HttpsError('permission-denied', 'errors.generic')
     }
+
+    // Names come from the stored profiles so a caller can't make the history show someone else
+    const fromName = (senderData.displayName as string | undefined) ?? senderName
+    const toName = (recipientData.displayName as string | undefined) ?? recipientName
+    const description = note?.trim().slice(0, 200) || toName
 
     const senderBalance = (senderData.balance as number) ?? 0
     if (senderBalance < amount) {
@@ -86,7 +91,7 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
       createdAt: now,
       createdBy: senderId,
       recipientId,
-      recipientName,
+      recipientName: toName,
       ...(sanitizedNote ? { note: sanitizedNote } : {}),
     })
     tx.update(senderRef, { balance: senderNewBalance })
@@ -101,7 +106,7 @@ export const transferToChild = onCall<TransferRequest>(async (request) => {
       createdAt: now,
       createdBy: senderId,
       recipientId: senderId,
-      recipientName: senderName,
+      recipientName: fromName,
       ...(sanitizedNote ? { note: sanitizedNote } : {}),
     })
     tx.update(recipientRef, { balance: recipientNewBalance })

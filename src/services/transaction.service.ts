@@ -29,6 +29,7 @@ export async function getTransactions(
   return { transactions, lastDoc: newLastDoc }
 }
 
+// Runs on the server so the balance can only change together with a matching ledger entry
 export async function createTransaction(
   userId: string,
   data: {
@@ -36,40 +37,18 @@ export async function createTransaction(
     amount: number
     description: string
     itemName?: string
-    createdBy: string
     note?: string
   }
-): Promise<Transaction> {
-  const batch = writeBatch(db)
-  const userRef = doc(db, 'users', userId)
-  const userSnap = await getDoc(userRef)
-
-  if (!userSnap.exists()) throw new Error('errors.userNotFound')
-
-  const currentBalance = (userSnap.data().balance as number) ?? 0
-  const delta = getBalanceDelta(data.type, data.amount)
-  const newBalance = roundCents(currentBalance + delta)
-
-  if (newBalance < 0) throw new Error('errors.insufficientBalance')
-
-  const txRef = doc(collection(db, 'users', userId, 'transactions'))
-  const transaction: Transaction = {
-    id: txRef.id,
+): Promise<void> {
+  const create = httpsCallable(functions, 'createTransaction')
+  await create({
+    userId,
     type: data.type,
     amount: data.amount,
-    balanceAfter: newBalance,
     description: sanitizeString(data.description, 200),
-    createdAt: new Date(),
-    createdBy: data.createdBy,
     ...(data.itemName != null && { itemName: sanitizeString(data.itemName, 100) }),
     ...(data.note != null && { note: sanitizeString(data.note, 500) }),
-  }
-
-  batch.set(txRef, transaction)
-  batch.update(userRef, { balance: newBalance })
-
-  await batch.commit()
-  return transaction
+  })
 }
 
 export async function updateTransaction(

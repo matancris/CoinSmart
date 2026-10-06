@@ -1,13 +1,9 @@
-import {
-  collection, doc, getDocs, setDoc,
-  query, where, writeBatch, getDoc, runTransaction,
-  type WriteBatch, type DocumentData,
-} from 'firebase/firestore'
-import { db } from '@/config/firebase'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '@/config/firebase'
 import type { SavingsGoal, SavingsType } from '@/types'
 import { toDate } from '@/utils/date'
 import { sanitizeString } from '@/utils/validation'
-import { SAVINGS_PLANS } from '@/utils/savings'
 
 export async function getSavingsGoals(userId: string): Promise<SavingsGoal[]> {
   const ref = collection(db, 'users', userId, 'savings')
@@ -16,363 +12,52 @@ export async function getSavingsGoals(userId: string): Promise<SavingsGoal[]> {
   return snap.docs.map(d => parseSavingsGoal(d.id, d.data()))
 }
 
+// Every change that moves money runs on the server (functions/src/wallet/savings.ts),
+// where the interest rate and lock rules can't be tampered with
 export async function createSavingsGoal(
   userId: string,
   data: { name: string; targetAmount?: number; savingsType: SavingsType }
-): Promise<SavingsGoal> {
-  const ref = doc(collection(db, 'users', userId, 'savings'))
-  const plan = SAVINGS_PLANS[data.savingsType]
-  const now = new Date()
-
-  let maturityDate: Date | undefined
-  if (plan.lockMonths > 0) {
-    maturityDate = new Date(now)
-    maturityDate.setMonth(maturityDate.getMonth() + plan.lockMonths)
-  }
-
-  const goal: SavingsGoal = {
-    id: ref.id,
+): Promise<void> {
+  const create = httpsCallable(functions, 'createSavingsGoal')
+  await create({
+    userId,
     name: sanitizeString(data.name, 100),
-    targetAmount: data.targetAmount,
-    currentAmount: 0,
-    interestRate: plan.annualRate,
-    accruedInterest: 0,
     savingsType: data.savingsType,
-    status: 'active',
-    createdAt: now,
-    maturityDate,
-    lastInterestAt: now,
-  }
-
-  // Firestore throws on undefined values — strip them before writing
-  const cleanGoal = Object.fromEntries(
-    Object.entries(goal).filter(([, v]) => v !== undefined)
-  )
-
-  await setDoc(ref, cleanGoal)
-  return goal
+    ...(data.targetAmount !== undefined && { targetAmount: data.targetAmount }),
+  })
 }
 
-export async function transferToSavings(
-  userId: string,
-  savingsId: string,
-  amount: number,
-  createdBy: string
-): Promise<void> {
-  const userRef = doc(db, 'users', userId)
-  const savingsRef = doc(db, 'users', userId, 'savings', savingsId)
-  const [userSnap, savingsSnap] = await Promise.all([getDoc(userRef), getDoc(savingsRef)])
-
-  if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('errors.notFound')
-
-  const balance = (userSnap.data().balance as number) ?? 0
-  if (Math.round(balance * 100) < Math.round(amount * 100)) {
-    throw new Error('errors.insufficientBalance')
-  }
-
-  const currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
-  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
-
-  const batch = writeBatch(db)
-
-  batch.update(userRef, {
-    balance: Math.round((balance - amount) * 100) / 100,
-    totalSavings: Math.round((totalSavings + amount) * 100) / 100,
-  })
-
-  batch.update(savingsRef, {
-    currentAmount: Math.round((currentSavings + amount) * 100) / 100,
-    // Interest accrues from the first deposit, not from when an empty goal was created
-    ...(currentSavings <= 0 && { lastInterestAt: new Date() }),
-  })
-
-  const txRef = doc(collection(db, 'users', userId, 'transactions'))
-  batch.set(txRef, {
-    id: txRef.id,
-    type: 'transfer_to_savings',
-    amount,
-    balanceAfter: Math.round((balance - amount) * 100) / 100,
-    description: savingsSnap.data().name,
-    savingsId,
-    createdAt: new Date(),
-    createdBy,
-  })
-
-  await batch.commit()
+export async function transferToSavings(userId: string, savingsId: string, amount: number): Promise<void> {
+  await moveSavings({ userId, savingsId, amount, direction: 'in' })
 }
 
-export async function depositToSavings(
-  userId: string,
-  savingsId: string,
-  amount: number,
-  createdBy: string
-): Promise<void> {
-  const userRef = doc(db, 'users', userId)
-  const savingsRef = doc(db, 'users', userId, 'savings', savingsId)
-  const [userSnap, savingsSnap] = await Promise.all([getDoc(userRef), getDoc(savingsRef)])
-
-  if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('errors.notFound')
-
-  const currentSavings = (savingsSnap.data().currentAmount as number) ?? 0
-  const totalSavings = (userSnap.data().totalSavings as number) ?? 0
-  const balance = (userSnap.data().balance as number) ?? 0
-
-  const batch = writeBatch(db)
-
-  batch.update(userRef, {
-    totalSavings: Math.round((totalSavings + amount) * 100) / 100,
-  })
-
-  batch.update(savingsRef, {
-    currentAmount: Math.round((currentSavings + amount) * 100) / 100,
-    // Interest accrues from the first deposit, not from when an empty goal was created
-    ...(currentSavings <= 0 && { lastInterestAt: new Date() }),
-  })
-
-  const txRef = doc(collection(db, 'users', userId, 'transactions'))
-  batch.set(txRef, {
-    id: txRef.id,
-    type: 'deposit_to_savings',
-    amount,
-    balanceAfter: balance,
-    description: savingsSnap.data().name,
-    savingsId,
-    createdAt: new Date(),
-    createdBy,
-  })
-
-  await batch.commit()
+export async function depositToSavings(userId: string, savingsId: string, amount: number): Promise<void> {
+  await moveSavings({ userId, savingsId, amount, direction: 'deposit' })
 }
 
 export async function withdrawFromSavings(
   userId: string,
   savingsId: string,
   amount: number,
-  createdBy: string,
   force?: boolean
 ): Promise<void> {
-  const userRef = doc(db, 'users', userId)
-  const savingsRef = doc(db, 'users', userId, 'savings', savingsId)
-  const [userSnap, savingsSnap] = await Promise.all([getDoc(userRef), getDoc(savingsRef)])
-
-  if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('errors.notFound')
-
-  const savingsData = savingsSnap.data()
-
-  if (!force) {
-    const maturityDate = savingsData.maturityDate
-      ? toDate(savingsData.maturityDate)
-      : undefined
-    if (maturityDate && new Date() < maturityDate) {
-      throw new Error('errors.savingsLocked')
-    }
-  }
-
-  let currentSavings = (savingsData.currentAmount as number) ?? 0
-  const interestRate = (savingsData.interestRate as number) ?? 0
-  const accruedInterest = (savingsData.accruedInterest as number) ?? 0
-  const balance = (userSnap.data().balance as number) ?? 0
-  let totalSavings = (userSnap.data().totalSavings as number) ?? 0
-
-  const now = new Date()
-  const batch = writeBatch(db)
-
-  const proRataInterest = calculateProRataInterest(savingsData, now, currentSavings, interestRate)
-  if (proRataInterest > 0) {
-    currentSavings += proRataInterest
-    totalSavings += proRataInterest
-    writeInterestTransaction(batch, userId, proRataInterest, balance, savingsData.name as string, savingsId, now)
-  }
-
-  if (Math.round(currentSavings * 100) < Math.round(amount * 100)) {
-    throw new Error('errors.insufficientBalance')
-  }
-
-  const newSavingsAmount = Math.round((currentSavings - amount) * 100) / 100
-
-  batch.update(userRef, {
-    balance: Math.round((balance + amount) * 100) / 100,
-    totalSavings: Math.round((totalSavings - amount) * 100) / 100,
-  })
-
-  batch.update(savingsRef, {
-    currentAmount: newSavingsAmount,
-    ...(proRataInterest > 0 && {
-      accruedInterest: Math.round((accruedInterest + proRataInterest) * 100) / 100,
-      lastInterestAt: now,
-    }),
-  })
-
-  const txRef = doc(collection(db, 'users', userId, 'transactions'))
-  batch.set(txRef, {
-    id: txRef.id,
-    type: 'transfer_from_savings',
-    amount,
-    balanceAfter: Math.round((balance + amount) * 100) / 100,
-    description: savingsData.name,
-    savingsId,
-    createdAt: now,
-    createdBy,
-  })
-
-  await batch.commit()
+  await moveSavings({ userId, savingsId, amount, direction: 'out', force: force === true })
 }
 
-export async function deleteSavingsGoal(
-  userId: string,
-  savingsId: string,
+export async function deleteSavingsGoal(userId: string, savingsId: string, force?: boolean): Promise<void> {
+  const remove = httpsCallable(functions, 'deleteSavingsGoal')
+  await remove({ userId, savingsId, force: force === true })
+}
+
+async function moveSavings(data: {
+  userId: string
+  savingsId: string
+  amount: number
+  direction: 'in' | 'deposit' | 'out'
   force?: boolean
-): Promise<void> {
-  const userRef = doc(db, 'users', userId)
-  const savingsRef = doc(db, 'users', userId, 'savings', savingsId)
-  const [userSnap, savingsSnap] = await Promise.all([getDoc(userRef), getDoc(savingsRef)])
-
-  if (!userSnap.exists() || !savingsSnap.exists()) throw new Error('errors.notFound')
-
-  const savingsData = savingsSnap.data()
-
-  if (!force) {
-    const maturityDate = savingsData.maturityDate
-      ? toDate(savingsData.maturityDate)
-      : undefined
-    if (maturityDate && new Date() < maturityDate) {
-      throw new Error('errors.savingsLocked')
-    }
-  }
-
-  let currentAmount = (savingsData.currentAmount as number) ?? 0
-  const interestRate = (savingsData.interestRate as number) ?? 0
-  const balance = (userSnap.data().balance as number) ?? 0
-  let totalSavings = (userSnap.data().totalSavings as number) ?? 0
-
-  const now = new Date()
-  const batch = writeBatch(db)
-
-  const proRataInterest = calculateProRataInterest(savingsData, now, currentAmount, interestRate)
-  if (proRataInterest > 0) {
-    currentAmount += proRataInterest
-    totalSavings += proRataInterest
-    writeInterestTransaction(batch, userId, proRataInterest, balance, savingsData.name as string, savingsId, now)
-  }
-
-  batch.delete(savingsRef)
-  batch.update(userRef, {
-    balance: Math.round((balance + currentAmount) * 100) / 100,
-    totalSavings: Math.round((totalSavings - currentAmount) * 100) / 100,
-  })
-  await batch.commit()
-}
-
-// Fallback for when the child opens the app before the hourly server job ran.
-// Transactional so it can't credit the same month twice.
-export async function applyInterestIfDue(
-  userId: string,
-  goal: SavingsGoal
-): Promise<boolean> {
-  if (goal.currentAmount <= 0 || goal.interestRate <= 0 || goal.status !== 'active') {
-    return false
-  }
-
-  const userRef = doc(db, 'users', userId)
-  const savingsRef = doc(db, 'users', userId, 'savings', goal.id)
-
-  return runTransaction(db, async (tx) => {
-    const [userSnap, savingsSnap] = await Promise.all([tx.get(userRef), tx.get(savingsRef)])
-    if (!userSnap.exists() || !savingsSnap.exists()) return false
-
-    const fresh = parseSavingsGoal(savingsSnap.id, savingsSnap.data())
-    if (fresh.currentAmount <= 0 || fresh.interestRate <= 0 || fresh.status !== 'active') return false
-
-    const lastApplied = fresh.lastInterestAt ?? fresh.createdAt
-    const now = new Date()
-    const monthsElapsed = (now.getFullYear() - lastApplied.getFullYear()) * 12
-      + (now.getMonth() - lastApplied.getMonth())
-    if (monthsElapsed <= 0) return false
-
-    const monthlyRate = fresh.interestRate / 12
-    const walletBalance = (userSnap.data().balance as number) ?? 0
-    const totalSavings = (userSnap.data().totalSavings as number) ?? 0
-    let runningAmount = fresh.currentAmount
-    let totalInterest = 0
-
-    for (let i = 0; i < monthsElapsed; i++) {
-      const monthInterest = Math.round(runningAmount * monthlyRate * 100) / 100
-      if (monthInterest <= 0) continue
-
-      totalInterest = Math.round((totalInterest + monthInterest) * 100) / 100
-      runningAmount = Math.round((runningAmount + monthInterest) * 100) / 100
-
-      const txRef = doc(collection(db, 'users', userId, 'transactions'))
-      tx.set(txRef, {
-        id: txRef.id,
-        type: 'interest',
-        amount: monthInterest,
-        balanceAfter: walletBalance,
-        description: fresh.name,
-        savingsId: fresh.id,
-        createdAt: now,
-        createdBy: 'system',
-      })
-    }
-
-    if (totalInterest <= 0) return false
-
-    tx.update(savingsRef, {
-      currentAmount: runningAmount,
-      accruedInterest: Math.round((fresh.accruedInterest + totalInterest) * 100) / 100,
-      lastInterestAt: now,
-    })
-    tx.update(userRef, {
-      totalSavings: Math.round((totalSavings + totalInterest) * 100) / 100,
-    })
-    return true
-  })
-}
-
-function calculateProRataInterest(
-  savingsData: DocumentData,
-  now: Date,
-  currentAmount: number,
-  interestRate: number,
-): number {
-  if (interestRate <= 0 || currentAmount <= 0) return 0
-
-  const lastInterestAt = savingsData.lastInterestAt
-    ? toDate(savingsData.lastInterestAt)
-    : savingsData.createdAt
-      ? toDate(savingsData.createdAt)
-      : now
-  const daysElapsed = Math.floor(
-    (now.getTime() - lastInterestAt.getTime()) / (1000 * 60 * 60 * 24)
-  )
-  if (daysElapsed <= 0) return 0
-
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  return Math.round(
-    currentAmount * (interestRate / 12) * (daysElapsed / daysInMonth) * 100
-  ) / 100
-}
-
-function writeInterestTransaction(
-  batch: WriteBatch,
-  userId: string,
-  amount: number,
-  balanceAfter: number,
-  description: string,
-  savingsId: string,
-  now: Date,
-): void {
-  const txRef = doc(collection(db, 'users', userId, 'transactions'))
-  batch.set(txRef, {
-    id: txRef.id,
-    type: 'interest',
-    amount,
-    balanceAfter,
-    description,
-    savingsId,
-    createdAt: now,
-    createdBy: 'system',
-  })
+}): Promise<void> {
+  const move = httpsCallable(functions, 'moveSavings')
+  await move(data)
 }
 
 function parseSavingsGoal(id: string, data: Record<string, unknown>): SavingsGoal {

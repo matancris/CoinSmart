@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processRecurring = exports.transferToChild = exports.onTransactionCreated = void 0;
+exports.syncWallet = exports.deleteSavingsGoal = exports.moveSavings = exports.createSavingsGoal = exports.createTransaction = exports.setChildPin = exports.createChild = exports.refreshChildSession = exports.childLogin = exports.checkFamilyCode = exports.processRecurring = exports.transferToChild = exports.onTransactionCreated = void 0;
 const app_1 = require("firebase-admin/app");
 (0, app_1.initializeApp)();
 var onTransactionCreated_1 = require("./notifications/onTransactionCreated");
@@ -9,4 +9,19 @@ var transferToChild_1 = require("./transfers/transferToChild");
 Object.defineProperty(exports, "transferToChild", { enumerable: true, get: function () { return transferToChild_1.transferToChild; } });
 var processRecurring_1 = require("./scheduled/processRecurring");
 Object.defineProperty(exports, "processRecurring", { enumerable: true, get: function () { return processRecurring_1.processRecurring; } });
+var childAuth_1 = require("./auth/childAuth");
+Object.defineProperty(exports, "checkFamilyCode", { enumerable: true, get: function () { return childAuth_1.checkFamilyCode; } });
+Object.defineProperty(exports, "childLogin", { enumerable: true, get: function () { return childAuth_1.childLogin; } });
+Object.defineProperty(exports, "refreshChildSession", { enumerable: true, get: function () { return childAuth_1.refreshChildSession; } });
+var children_1 = require("./family/children");
+Object.defineProperty(exports, "createChild", { enumerable: true, get: function () { return children_1.createChild; } });
+Object.defineProperty(exports, "setChildPin", { enumerable: true, get: function () { return children_1.setChildPin; } });
+var transactions_1 = require("./wallet/transactions");
+Object.defineProperty(exports, "createTransaction", { enumerable: true, get: function () { return transactions_1.createTransaction; } });
+var savings_1 = require("./wallet/savings");
+Object.defineProperty(exports, "createSavingsGoal", { enumerable: true, get: function () { return savings_1.createSavingsGoal; } });
+Object.defineProperty(exports, "moveSavings", { enumerable: true, get: function () { return savings_1.moveSavings; } });
+Object.defineProperty(exports, "deleteSavingsGoal", { enumerable: true, get: function () { return savings_1.deleteSavingsGoal; } });
+var syncWallet_1 = require("./wallet/syncWallet");
+Object.defineProperty(exports, "syncWallet", { enumerable: true, get: function () { return syncWallet_1.syncWallet; } });
 //# sourceMappingURL=index.js.map

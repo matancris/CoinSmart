@@ -89,7 +89,7 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
         // Route PIN updates to loginProfile
         const { pin, ...userUpdates } = updates
         if (pin) {
-          await userService.updateChildPin(child.familyId, childId, pin)
+          await userService.updateChildPin(childId, pin)
         }
 
         if (Object.keys(userUpdates).length > 0) {
