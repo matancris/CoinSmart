@@ -125,7 +125,7 @@ export async function toggleAllowanceStatus(
   await updateDoc(ref, updates)
 }
 
-// Fallback for when the child opens the app before the hourly server job ran. Runs in a
+// Fallback for when the child opens the app before the daily server job ran. Runs in a
 // transaction and re-reads each schedule, so it can never pay the same period twice.
 export async function applyAllowancesIfDue(
   userId: string,

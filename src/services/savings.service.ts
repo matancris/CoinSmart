@@ -263,7 +263,7 @@ export async function deleteSavingsGoal(
   await batch.commit()
 }
 
-// Fallback for when the child opens the app before the hourly server job ran.
+// Fallback for when the child opens the app before the daily server job ran.
 // Transactional so it can't credit the same month twice.
 export async function applyInterestIfDue(
   userId: string,
