@@ -81,7 +81,6 @@ export function ChildDetail() {
       type: actionType,
       amount: numAmount,
       description: description || t(`transaction.${actionType}`),
-      createdBy: appUser.id,
       ...(actionType === 'purchase' && itemName ? { itemName } : {}),
     })
     setSubmitting(false)
@@ -128,9 +127,9 @@ export function ChildDetail() {
       ? walletActions.depositToSavings
       : transferMode === 'in'
         ? walletActions.transferToSavings
-        : (userId: string, savingsId: string, amt: number, createdBy: string) =>
-            walletActions.withdrawFromSavings(userId, savingsId, amt, createdBy, true)
-    const success = await fn(child.id, showTransfer, numAmount, appUser.id)
+        : (userId: string, savingsId: string, amt: number) =>
+            walletActions.withdrawFromSavings(userId, savingsId, amt, true)
+    const success = await fn(child.id, showTransfer, numAmount)
     setSubmitting(false)
 
     if (success) {

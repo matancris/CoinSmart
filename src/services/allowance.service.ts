@@ -1,6 +1,5 @@
 import {
-  collection, doc, getDocs, setDoc, updateDoc, deleteDoc,
-  getDoc, runTransaction,
+  collection, doc, getDocs, setDoc, updateDoc, deleteDoc, getDoc,
 } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import type { Allowance, AllowanceFrequency, AllowanceStatus } from '@/types'
@@ -125,64 +124,6 @@ export async function toggleAllowanceStatus(
   await updateDoc(ref, updates)
 }
 
-// Fallback for when the child opens the app before the daily server job ran. Runs in a
-// transaction and re-reads each schedule, so it can never pay the same period twice.
-export async function applyAllowancesIfDue(
-  userId: string,
-  allowances: Allowance[]
-): Promise<boolean> {
-  const now = new Date()
-  const candidates = allowances.filter(a => a.status === 'active' && a.nextDueAt <= now)
-  if (candidates.length === 0) return false
-
-  const userRef = doc(db, 'users', userId)
-
-  return runTransaction(db, async (tx) => {
-    const allowanceRefs = candidates.map(a => doc(db, 'users', userId, 'allowances', a.id))
-    const [userSnap, ...allowanceSnaps] = await Promise.all([
-      tx.get(userRef),
-      ...allowanceRefs.map(ref => tx.get(ref)),
-    ])
-    if (!userSnap.exists()) return false
-
-    let balance = (userSnap.data().balance as number) ?? 0
-    let applied = false
-
-    allowanceSnaps.forEach((snap, idx) => {
-      if (!snap.exists()) return
-      const allowance = parseAllowance(snap.id, snap.data() as Record<string, unknown>)
-      if (allowance.status !== 'active' || allowance.nextDueAt > now) return
-
-      const periods = countMissedPeriods(allowance, now)
-      if (periods <= 0) return
-
-      for (let i = 0; i < periods; i++) {
-        balance = Math.round((balance + allowance.amount) * 100) / 100
-        const txRef = doc(collection(db, 'users', userId, 'transactions'))
-        tx.set(txRef, {
-          id: txRef.id,
-          type: 'allowance',
-          amount: allowance.amount,
-          balanceAfter: balance,
-          description: allowance.description,
-          createdAt: now,
-          createdBy: 'system',
-        })
-      }
-
-      const nextDueAt = allowance.frequency === 'every_x_days'
-        ? advanceByDays(allowance.nextDueAt, periods * (allowance.intervalDays ?? 7))
-        : computeNextDueAt(allowance.frequency, now, allowance.intervalDays, allowance.dayOfMonth)
-
-      tx.update(allowanceRefs[idx], { lastExecutedAt: now, nextDueAt })
-      applied = true
-    })
-
-    if (applied) tx.update(userRef, { balance })
-    return applied
-  })
-}
-
 export function computeNextDueAt(
   frequency: AllowanceFrequency,
   fromDate: Date,
@@ -209,31 +150,6 @@ export function computeNextDueAt(
   }
   next.setDate(day)
   return next
-}
-
-// Keeps every-X-days allowances on their original schedule instead of drifting to when the app was opened
-function advanceByDays(from: Date, days: number): Date {
-  const next = new Date(from)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function countMissedPeriods(allowance: Allowance, now: Date): number {
-  if (allowance.frequency === 'every_x_days') {
-    const days = allowance.intervalDays ?? 7
-    const msPerDay = 1000 * 60 * 60 * 24
-    const msSinceDue = now.getTime() - allowance.nextDueAt.getTime()
-    return Math.floor(msSinceDue / (days * msPerDay)) + 1
-  }
-
-  // monthly
-  let count = 0
-  const dueDate = new Date(allowance.nextDueAt)
-  while (dueDate <= now) {
-    count++
-    dueDate.setMonth(dueDate.getMonth() + 1)
-  }
-  return count
 }
 
 function parseAllowance(id: string, data: Record<string, unknown>): Allowance {

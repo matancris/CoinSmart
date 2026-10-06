@@ -1,13 +1,14 @@
 import {
-  doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
+  doc, getDoc, getDocs, updateDoc, deleteDoc,
   collection, query, where, onSnapshot,
 } from 'firebase/firestore'
-import { db } from '@/config/firebase'
-import type { AppUser, LoginProfile, SiblingProfile } from '@/types'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '@/config/firebase'
+import type { AppUser, SiblingProfile } from '@/types'
 import { toDate } from '@/utils/date'
 import { sanitizeString } from '@/utils/validation'
-import { generateSalt, hashPin } from '@/utils/crypto'
 
+// Runs on the server so the PIN is hashed there and never stored where the browser can read it
 export async function createChild(data: {
   familyId: string
   displayName: string
@@ -15,37 +16,17 @@ export async function createChild(data: {
   pin: string
   initialBalance: number
 }): Promise<AppUser> {
-  if (await isPinTaken(data.familyId, data.pin)) throw new Error('errors.pinInUse')
-
-  const id = doc(collection(db, 'users')).id
-
-  const child: AppUser = {
-    id,
-    familyId: data.familyId,
-    role: 'child',
+  const create = httpsCallable<
+    { displayName: string; avatarEmoji: string; pin: string; initialBalance: number },
+    { id: string }
+  >(functions, 'createChild')
+  const { data: result } = await create({
     displayName: sanitizeString(data.displayName, 50),
     avatarEmoji: data.avatarEmoji,
-    balance: data.initialBalance,
-    totalSavings: 0,
-    isActive: true,
-    createdAt: new Date(),
-  }
-
-  const salt = generateSalt()
-  const pinHash = await hashPin(data.pin, salt)
-
-  const loginProfile: LoginProfile = {
-    userId: id,
-    displayName: child.displayName,
-    avatarEmoji: child.avatarEmoji,
-    pinHash,
-    pinSalt: salt,
-  }
-
-  await setDoc(doc(db, 'users', id), child)
-  await setDoc(doc(db, 'families', data.familyId, 'loginProfiles', id), loginProfile)
-
-  return child
+    pin: data.pin,
+    initialBalance: data.initialBalance,
+  })
+  return getUser(result.id)
 }
 
 export async function getUser(userId: string): Promise<AppUser> {
@@ -86,29 +67,10 @@ export async function updateUser(userId: string, updates: Partial<AppUser>): Pro
   await updateDoc(doc(db, 'users', userId), updates as Record<string, string | number | boolean | Date | undefined>)
 }
 
-export async function updateChildPin(familyId: string, childId: string, newPin: string): Promise<void> {
-  if (await isPinTaken(familyId, newPin, childId)) throw new Error('errors.pinInUse')
-
-  const salt = generateSalt()
-  const pinHash = await hashPin(newPin, salt)
-
-  const profileRef = doc(db, 'families', familyId, 'loginProfiles', childId)
-  const profileSnap = await getDoc(profileRef)
-
-  if (profileSnap.exists()) {
-    await updateDoc(profileRef, { pinHash, pinSalt: salt })
-  } else {
-    // Migrate: create full loginProfile for pre-existing children
-    const user = await getUser(childId)
-    const profile: LoginProfile = {
-      userId: childId,
-      displayName: user.displayName,
-      avatarEmoji: user.avatarEmoji,
-      pinHash,
-      pinSalt: salt,
-    }
-    await setDoc(profileRef, profile)
-  }
+// Also signs the child out on every device
+export async function updateChildPin(childId: string, newPin: string): Promise<void> {
+  const setPin = httpsCallable<{ childId: string; pin: string }, { success: boolean }>(functions, 'setChildPin')
+  await setPin({ childId, pin: newPin })
 }
 
 export async function setBalance(userId: string, newBalance: number): Promise<void> {
@@ -154,17 +116,6 @@ export async function getSiblingProfiles(familyId: string, currentUserId: string
 
 export async function updateLoginProfileAvatar(familyId: string, childId: string, avatarEmoji: string): Promise<void> {
   await updateDoc(doc(db, 'families', familyId, 'loginProfiles', childId), { avatarEmoji })
-}
-
-// Child login matches the PIN against every profile in the family, so PINs must be unique per family
-async function isPinTaken(familyId: string, pin: string, excludeUserId?: string): Promise<boolean> {
-  const snap = await getDocs(collection(db, 'families', familyId, 'loginProfiles'))
-  for (const profileDoc of snap.docs) {
-    if (profileDoc.id === excludeUserId) continue
-    const { pinHash, pinSalt } = profileDoc.data() as LoginProfile
-    if (await hashPin(pin, pinSalt) === pinHash) return true
-  }
-  return false
 }
 
 function parseUser(id: string, data: Record<string, unknown>): AppUser {

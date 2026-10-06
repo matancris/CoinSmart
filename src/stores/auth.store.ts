@@ -93,14 +93,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const session = getChildSession()
         if (session) {
           try {
-            if (!firebaseUser) {
-              suppressAuthListener = true
-              await authService.logout().catch(() => {})
-              await authService.signInAsAnonymous()
-              suppressAuthListener = false
-            }
-            // Refresh lastAuthUid so Firestore rules recognise this anonymous session
-            await authService.updateLastAuthUid(session.childId)
+            // Without the anonymous sign-in that logged in, the server-side session is gone too
+            if (!firebaseUser) throw new Error('errors.sessionExpired')
+            await authService.refreshChildSession(session.childId)
             const appUser = await authService.fetchAppUser(session.childId)
             const family = await authService.fetchFamily(session.familyId)
             // Sliding expiration: refresh the 7-day timer on each visit

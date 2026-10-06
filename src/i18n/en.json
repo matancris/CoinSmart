@@ -141,7 +141,9 @@
     "userNotFound": "User not found",
     "familyNotFound": "Family not found",
     "notFound": "Not found",
-    "pinInUse": "This PIN is already used by another child in the family"
+    "pinInUse": "This PIN is already used by another child in the family",
+    "tooManyAttempts": "Too many wrong PINs. Try again in 15 minutes",
+    "sessionExpired": "Your login expired, please log in again"
   },
   "savings": {
     "choosePlan": "Choose Savings Plan",

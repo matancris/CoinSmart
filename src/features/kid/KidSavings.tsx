@@ -59,7 +59,7 @@ export function KidSavings() {
 
     setSubmitting(true)
     const fn = transferMode === 'in' ? transferToSavings : withdrawFromSavings
-    const success = await fn(appUser.id, showTransfer, amount, appUser.id)
+    const success = await fn(appUser.id, showTransfer, amount)
     setSubmitting(false)
 
     if (success) {

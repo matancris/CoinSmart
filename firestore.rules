@@ -2,109 +2,125 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Family documents
+    // Money, PINs and child sessions only change through Cloud Functions (functions/src),
+    // so the browser can never edit a balance or skip the PIN check.
+
     match /families/{familyId} {
-      // Any authenticated user can read families (needed for child login by code).
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && isFamilyParent(familyId);
+      allow get: if isFamilyMember(familyId);
+      // Registration: each parent account creates exactly one family, keyed by its uid
+      allow create: if isParentAccount()
+        && familyId == request.auth.uid + '_family'
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isParentOf(familyId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy']);
 
-      // Login profiles — readable by any auth user (needed for child login),
-      // writable only by the family's parent
+      // Names and avatars shown on the sibling list. PIN hashes live in /pins instead.
       match /loginProfiles/{profileId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isAuthenticated() && isFamilyParent(familyId);
+        allow read: if isFamilyMember(familyId);
+        allow update: if isParentOf(familyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'avatarEmoji']);
+        allow delete: if isParentOf(familyId);
+      }
+
+      match /pins/{childId} {
+        allow read, write: if false;
       }
     }
 
-    // User documents — restricted to family members only
     match /users/{userId} {
-      // Single-doc read: owner, parent in same family, or child with matching lastAuthUid
-      allow get: if isAuthenticated() && canAccessUser(userId);
-      // Collection query: parent can list users in their own family
-      allow list: if isAuthenticated() && isParentReadingOwnFamily();
+      allow get: if canAccessUser(userId);
+      allow list: if isParentOf(resource.data.familyId);
 
-      // A user can create their own doc (registration)
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      // Parents can create child docs in their family
-      allow create: if isAuthenticated() && isParent();
+      // Registration: a parent creates their own profile, with an empty wallet, in their own family
+      allow create: if isParentAccount()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'parent'
+        && request.resource.data.familyId == userId + '_family'
+        && request.resource.data.balance == 0
+        && request.resource.data.totalSavings == 0;
 
-      // Allow anonymous login stamp: only anonymous users can set lastAuthUid or fcmTokens on a child.
-      // TODO: Move to Cloud Function for proper PIN verification server-side.
-      allow update: if isAuthenticated()
-        && request.auth.token.firebase.sign_in_provider == 'anonymous'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAuthUid', 'fcmTokens'])
-        && resource.data.role == 'child';
+      // Parents edit their own profile and their children's (including setting a balance),
+      // but nobody can change roles or move between families
+      allow update: if isParentAccount()
+        && (request.auth.uid == userId || isParentInSameFamily(userId))
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'role', 'familyId', 'createdAt', 'lastAuthUid']);
 
-      // Parents can update users in their family
-      allow update: if isAuthenticated() && isParentInSameFamily(userId);
-      // A user can update their own doc (parent or child with matching lastAuthUid)
-      allow update: if isAuthenticated() && canAccessUser(userId);
+      // A logged-in child can only register their device for notifications
+      allow update: if isChildSessionFor(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmTokens']);
 
-      // Transactions subcollection — restricted to owner/parent, validated writes
       match /transactions/{txId} {
-        allow read: if isAuthenticated() && canAccessUser(userId);
-        allow create: if isAuthenticated() && canAccessUser(userId)
-          && request.resource.data.amount is number
-          && request.resource.data.amount > 0;
-        // Parents can update description/note but NOT amount (prevents balance drift)
-        allow update: if isAuthenticated() && isParentInSameFamily(userId)
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['amount', 'balanceAfter', 'type', 'createdAt']);
-        allow delete: if isAuthenticated() && isParentInSameFamily(userId);
+        allow read: if canAccessUser(userId);
+        // Parents can fix the wording, never the money
+        allow update: if isParentInSameFamily(userId)
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'amount', 'balanceAfter', 'type', 'createdAt', 'createdBy', 'savingsId']);
+        allow delete: if isParentInSameFamily(userId);
       }
 
-      // Allowances subcollection — parents can manage, owner/parent can read
       match /allowances/{allowanceId} {
-        allow read: if isAuthenticated() && canAccessUser(userId);
-        allow create, update, delete: if isAuthenticated() && isParentInSameFamily(userId);
-        // Due allowances are applied when the child opens the app — only the schedule may advance
-        allow update: if isAuthenticated() && canAccessUser(userId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastExecutedAt', 'nextDueAt']);
+        allow read: if canAccessUser(userId);
+        allow create, update, delete: if isParentInSameFamily(userId);
       }
 
-      // Savings subcollection — restricted to owner/parent, validated writes
       match /savings/{savingsId} {
-        allow read: if isAuthenticated() && canAccessUser(userId);
-        allow create: if isAuthenticated() && canAccessUser(userId)
-          && request.resource.data.currentAmount is number
-          && request.resource.data.currentAmount >= 0;
-        allow update: if isAuthenticated() && canAccessUser(userId)
-          && request.resource.data.currentAmount is number
-          && request.resource.data.currentAmount >= 0;
-        allow delete: if isAuthenticated() && canAccessUser(userId);
+        allow read: if canAccessUser(userId);
+        // Deleting a transaction from a goal reverses it on the goal
+        allow update: if isParentInSameFamily(userId);
       }
     }
 
-    function isAuthenticated() {
-      return request.auth != null;
+    // Links a child's anonymous sign-in to their profile; written only by childLogin
+    match /childSessions/{sessionUid} {
+      allow get, delete: if request.auth != null && request.auth.uid == sessionUid;
     }
 
-    function isParent() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'parent';
+    function isParentAccount() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    function isFamilyParent(familyId) {
-      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return user.data.familyId == familyId && user.data.role == 'parent';
+    function requesterPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function sessionPath() {
+      return /databases/$(database)/documents/childSessions/$(request.auth.uid);
+    }
+
+    function isParentOf(familyId) {
+      return isParentAccount()
+        && exists(requesterPath())
+        && get(requesterPath()).data.role == 'parent'
+        && get(requesterPath()).data.familyId == familyId;
     }
 
     function isParentInSameFamily(targetUserId) {
-      let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
       let target = get(/databases/$(database)/documents/users/$(targetUserId));
-      return requester.data.role == 'parent' && requester.data.familyId == target.data.familyId;
+      return isParentOf(target.data.familyId);
     }
 
-    function isParentReadingOwnFamily() {
-      let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return requester.data.role == 'parent'
-        && resource.data.familyId == requester.data.familyId;
+    function hasChildSession() {
+      return request.auth != null
+        && exists(sessionPath())
+        && get(sessionPath()).data.expiresAt > request.time;
+    }
+
+    function isChildSessionFor(targetUserId) {
+      let target = get(/databases/$(database)/documents/users/$(targetUserId));
+      return hasChildSession()
+        && get(sessionPath()).data.userId == targetUserId
+        && target.data.get('isActive', true) != false;
+    }
+
+    function isFamilyMember(familyId) {
+      return isParentOf(familyId)
+        || (hasChildSession() && get(sessionPath()).data.familyId == familyId);
     }
 
     function canAccessUser(targetUserId) {
-      let target = get(/databases/$(database)/documents/users/$(targetUserId));
-      return request.auth.uid == targetUserId
+      return (isParentAccount() && request.auth.uid == targetUserId)
         || isParentInSameFamily(targetUserId)
-        || target.data.lastAuthUid == request.auth.uid;
+        || isChildSessionFor(targetUserId);
     }
   }
 }

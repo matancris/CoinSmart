@@ -11,7 +11,6 @@ export interface AppUser {
   totalSavings: number
   isActive: boolean
   createdAt: Date
-  lastAuthUid?: string
   fcmTokens?: string[]
   canTransferToSiblings?: boolean
 }

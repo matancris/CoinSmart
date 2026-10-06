@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Transaction, TransactionType, SavingsGoal, SavingsType, Allowance, AllowanceFrequency, AllowanceStatus, SiblingProfile } from '@/types'
-import { transactionService, savingsService, userService, allowanceService } from '@/services'
+import { transactionService, savingsService, userService, allowanceService, walletService } from '@/services'
 import { handleError } from '@/utils'
 import { toast } from '@/components/ui/Toast'
 import { i18n } from '@/i18n'
@@ -31,7 +31,6 @@ interface WalletState {
       amount: number
       description: string
       itemName?: string
-      createdBy: string
       note?: string
     }) => Promise<boolean>
     createSavingsGoal: (userId: string, data: {
@@ -39,9 +38,9 @@ interface WalletState {
       targetAmount?: number
       savingsType: SavingsType
     }) => Promise<boolean>
-    transferToSavings: (userId: string, savingsId: string, amount: number, createdBy: string) => Promise<boolean>
-    depositToSavings: (userId: string, savingsId: string, amount: number, createdBy: string) => Promise<boolean>
-    withdrawFromSavings: (userId: string, savingsId: string, amount: number, createdBy: string, force?: boolean) => Promise<boolean>
+    transferToSavings: (userId: string, savingsId: string, amount: number) => Promise<boolean>
+    depositToSavings: (userId: string, savingsId: string, amount: number) => Promise<boolean>
+    withdrawFromSavings: (userId: string, savingsId: string, amount: number, force?: boolean) => Promise<boolean>
     deleteSavingsGoal: (userId: string, savingsId: string, force?: boolean) => Promise<boolean>
     deleteTransaction: (userId: string, transactionId: string) => Promise<boolean>
     setBalance: (userId: string, newBalance: number) => Promise<boolean>
@@ -95,23 +94,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         ])
         set({ savingsGoals, allowances })
 
-        let needsRefresh = false
-
-        const eligibleGoals = savingsGoals.filter(g =>
-          g.status === 'active' && g.interestRate > 0
-        )
-        // Sequential: each goal read-modify-writes the user's totalSavings, so parallel runs lose updates
-        for (const goal of eligibleGoals) {
-          if (await savingsService.applyInterestIfDue(userId, goal)) needsRefresh = true
-        }
-
-        const activeAllowances = allowances.filter(a => a.status === 'active')
-        if (activeAllowances.length > 0) {
-          const allowanceApplied = await allowanceService.applyAllowancesIfDue(userId, activeAllowances)
-          if (allowanceApplied) needsRefresh = true
-        }
-
-        if (needsRefresh) {
+        if (await walletService.syncWallet(userId)) {
           const [updatedSavings, updatedAllowances] = await Promise.all([
             savingsService.getSavingsGoals(userId),
             allowanceService.getAllowances(userId),
@@ -253,8 +236,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     createSavingsGoal: async (userId, data) => {
       try {
-        const goal = await savingsService.createSavingsGoal(userId, data)
-        set(state => ({ savingsGoals: [...state.savingsGoals, goal] }))
+        await savingsService.createSavingsGoal(userId, data)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
         return true
       } catch (error) {
@@ -264,9 +248,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       }
     },
 
-    transferToSavings: async (userId, savingsId, amount, createdBy) => {
+    transferToSavings: async (userId, savingsId, amount) => {
       try {
-        await savingsService.transferToSavings(userId, savingsId, amount, createdBy)
+        await savingsService.transferToSavings(userId, savingsId, amount)
         const savingsGoals = await savingsService.getSavingsGoals(userId)
         set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
@@ -278,9 +262,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       }
     },
 
-    depositToSavings: async (userId, savingsId, amount, createdBy) => {
+    depositToSavings: async (userId, savingsId, amount) => {
       try {
-        await savingsService.depositToSavings(userId, savingsId, amount, createdBy)
+        await savingsService.depositToSavings(userId, savingsId, amount)
         const savingsGoals = await savingsService.getSavingsGoals(userId)
         set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')
@@ -292,9 +276,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       }
     },
 
-    withdrawFromSavings: async (userId, savingsId, amount, createdBy, force) => {
+    withdrawFromSavings: async (userId, savingsId, amount, force) => {
       try {
-        await savingsService.withdrawFromSavings(userId, savingsId, amount, createdBy, force)
+        await savingsService.withdrawFromSavings(userId, savingsId, amount, force)
         const savingsGoals = await savingsService.getSavingsGoals(userId)
         set({ savingsGoals })
         toast(i18n.t('common.success'), 'success')

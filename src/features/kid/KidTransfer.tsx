@@ -46,7 +46,6 @@ export function KidTransfer() {
       amount: numAmount,
       description: itemName.trim(),
       itemName: itemName.trim(),
-      createdBy: appUser.id,
     })
     setSubmitting(false)
 
@@ -67,7 +66,7 @@ export function KidTransfer() {
     }
 
     setSubmitting(true)
-    const success = await transferToSavings(appUser.id, selectedGoal, numAmount, appUser.id)
+    const success = await transferToSavings(appUser.id, selectedGoal, numAmount)
     setSubmitting(false)
 
     if (success) {

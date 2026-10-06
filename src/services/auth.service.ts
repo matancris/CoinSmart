@@ -6,12 +6,12 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore'
-import { auth, db } from '@/config/firebase'
-import type { AppUser, Family, LoginProfile } from '@/types'
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, functions } from '@/config/firebase'
+import type { AppUser, Family } from '@/types'
 import { toDate } from '@/utils/date'
 import { sanitizeString } from '@/utils/validation'
-import { hashPin } from '@/utils/crypto'
 
 export function onAuthChange(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback)
@@ -60,60 +60,33 @@ export async function loginWithEmail(email: string, password: string): Promise<A
   return fetchAppUser(cred.user.uid)
 }
 
+// The PIN is checked on the server, which links this anonymous sign-in to the child
 export async function loginChildWithPin(
   familyCode: string,
   pin: string
 ): Promise<{ appUser: AppUser; family: Family }> {
-  // Sign in anonymously first so Firestore rules allow reads
-  if (!auth.currentUser) {
-    await signInAnonymously(auth)
-  }
+  await ensureAnonymousSession()
 
-  const familySnap = await getDocs(
-    query(collection(db, 'families'), where('code', '==', familyCode.toUpperCase()))
+  const childLogin = httpsCallable<{ familyCode: string; pin: string }, { userId: string; familyId: string }>(
+    functions, 'childLogin'
   )
+  const { data } = await childLogin({ familyCode: familyCode.toUpperCase(), pin })
 
-  if (familySnap.empty) {
-    throw new Error('errors.invalidFamilyCode')
-  }
-
-  const family = { id: familySnap.docs[0].id, ...familySnap.docs[0].data() } as Family
-
-  // Query login profiles instead of user docs
-  const profilesSnap = await getDocs(
-    collection(db, 'families', family.id, 'loginProfiles')
-  )
-
-  let matchedProfile: LoginProfile | null = null
-  for (const profileDoc of profilesSnap.docs) {
-    const profile = profileDoc.data() as LoginProfile
-    const inputHash = await hashPin(pin, profile.pinSalt)
-    if (inputHash === profile.pinHash) {
-      matchedProfile = profile
-      break
-    }
-  }
-
-  if (!matchedProfile) {
-    throw new Error('errors.invalidPin')
-  }
-
-  // Stamp child doc with anonymous UID so Firestore rules can verify access
-  await updateDoc(doc(db, 'users', matchedProfile.userId), { lastAuthUid: auth.currentUser!.uid })
-
-  const appUser = await fetchAppUser(matchedProfile.userId)
-
+  const [appUser, family] = await Promise.all([fetchAppUser(data.userId), fetchFamily(data.familyId)])
   return { appUser, family }
 }
 
 export async function validateFamilyCode(familyCode: string): Promise<boolean> {
-  if (!auth.currentUser) {
-    await signInAnonymously(auth)
-  }
-  const familySnap = await getDocs(
-    query(collection(db, 'families'), where('code', '==', familyCode.toUpperCase()))
-  )
-  return !familySnap.empty
+  await ensureAnonymousSession()
+  const checkFamilyCode = httpsCallable<{ familyCode: string }, { valid: boolean }>(functions, 'checkFamilyCode')
+  const { data } = await checkFamilyCode({ familyCode: familyCode.toUpperCase() })
+  return data.valid
+}
+
+// Only extends a session this device already has; a new device must log in with the PIN
+export async function refreshChildSession(childId: string): Promise<void> {
+  const refresh = httpsCallable<{ childId: string }, { familyId: string }>(functions, 'refreshChildSession')
+  await refresh({ childId })
 }
 
 export async function fetchAppUser(userId: string): Promise<AppUser> {
@@ -138,17 +111,22 @@ export async function fetchFamily(familyId: string): Promise<Family> {
 }
 
 
-export async function signInAsAnonymous(): Promise<void> {
-  await signInAnonymously(auth)
-}
-
-export async function updateLastAuthUid(userId: string): Promise<void> {
-  if (!auth.currentUser) return
-  await updateDoc(doc(db, 'users', userId), { lastAuthUid: auth.currentUser.uid })
-}
-
 export async function logout(): Promise<void> {
+  const current = auth.currentUser
+  if (current?.isAnonymous) {
+    await deleteDoc(doc(db, 'childSessions', current.uid)).catch(() => {})
+  }
   await signOut(auth)
+}
+
+async function ensureAnonymousSession(): Promise<void> {
+  // A parent signed in on a shared device must not carry their account into the child's session
+  if (auth.currentUser && !auth.currentUser.isAnonymous) {
+    await signOut(auth)
+  }
+  if (!auth.currentUser) {
+    await signInAnonymously(auth)
+  }
 }
 
 function parseAppUser(id: string, data: Record<string, unknown>): AppUser {
