@@ -66,11 +66,16 @@ Then:
 4. Then run the normal interest logic on the **updated** goal data, so month boundaries after maturity
    pay the flexible rate.
 
+Inside a transaction, merge the settlement updates with the caller's other updates into **one
+`tx.update` per goal**. Remove `maturedAt` with `FieldValue.delete()`.
+
 Call it everywhere interest is calculated, before the existing interest code:
 - **`processChild`** (daily job + `syncWallet`): settle before `planInterest`. Settlement must count as
   work on its own; today the function returns early when there are no allowance or interest plans. Use
   the settled `currentAmount` in the `goalAmounts` map so `totalSavings` stays right.
-- **`moveSavings`** and **`deleteSavingsGoal`**: settle before `proRataInterest`.
+- **`moveSavings`**: settle at the top for **every** direction (`in`, `deposit`, `out`), before any amount
+  changes. Otherwise money deposited into a matured but unsettled goal would earn the locked rate.
+- **`deleteSavingsGoal`**: settle before `proRataInterest`.
 - **New `renewSavingsGoal`**: settle first (see below).
 
 ### Worked example

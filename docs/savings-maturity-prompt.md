@@ -32,10 +32,12 @@ Gotchas:
 
 PR:
 - This branch is stacked on fix/savings-total-sync (it uses sumSavings from there).
-- Check whether that fix is already in main: `git merge-base --is-ancestor origin/fix/savings-total-sync origin/main`.
+- Check whether that fix is already in main (it may have been squash-merged, so check the content):
+  `git grep -q sumSavings origin/main -- functions/src/shared/access.ts`.
   - If it is: merge origin/main into the branch, and open the PR against main.
   - If not: open the PR with base fix/savings-total-sync and say in the body that it must merge after that branch.
 - Use the repo's PR template if one exists.
 - In the body, summarize the behavior change for parents and kids, and the settlement rule.
 - Don't put model names in commits or the PR.
+- Delete docs/savings-maturity-prompt.md in your PR (keep docs/savings-maturity.md).
 ```
