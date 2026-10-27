@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { Timestamp, type DocumentData, type Transaction } from 'firebase-admin/firestore'
-import { authorizeForChild, cleanString, db, requireAmount, requireDocId, round2 } from '../shared/access'
+import { authorizeForChild, cleanString, db, requireAmount, requireDocId, round2, sumSavings } from '../shared/access'
 
 type SavingsType = 'flexible' | 'locked_2m' | 'locked_6m'
 
@@ -135,14 +135,17 @@ export const moveSavings = onCall<MoveRequest>(async (request) => {
   const savingsRef = db.doc(`users/${userId}/savings/${savingsId}`)
 
   await db.runTransaction(async (tx) => {
-    const [userSnap, savingsSnap] = await Promise.all([tx.get(userRef), tx.get(savingsRef)])
+    const [userSnap, savingsSnap, allGoalsSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(savingsRef),
+      tx.get(userRef.collection('savings')),
+    ])
     const user = userSnap.data()
     const goal = savingsSnap.data()
     if (!user || !goal) throw new HttpsError('not-found', 'errors.notFound')
 
     const now = new Date()
     const balance = (user.balance as number | undefined) ?? 0
-    let totalSavings = (user.totalSavings as number | undefined) ?? 0
     let currentAmount = (goal.currentAmount as number | undefined) ?? 0
     let newBalance = balance
     const goalUpdates: Record<string, unknown> = {}
@@ -154,7 +157,6 @@ export const moveSavings = onCall<MoveRequest>(async (request) => {
       const interest = proRataInterest(goal, now)
       if (interest > 0) {
         currentAmount = round2(currentAmount + interest)
-        totalSavings = round2(totalSavings + interest)
         goalUpdates.accruedInterest = round2(((goal.accruedInterest as number | undefined) ?? 0) + interest)
         goalUpdates.lastInterestAt = now
         writeInterestTransaction(tx, userId, interest, balance, goal, savingsId, now)
@@ -162,7 +164,6 @@ export const moveSavings = onCall<MoveRequest>(async (request) => {
       if (currentAmount < amount) throw new HttpsError('failed-precondition', 'errors.insufficientBalance')
 
       currentAmount = round2(currentAmount - amount)
-      totalSavings = round2(totalSavings - amount)
       newBalance = round2(balance + amount)
       txType = 'transfer_from_savings'
     } else {
@@ -173,13 +174,13 @@ export const moveSavings = onCall<MoveRequest>(async (request) => {
       // Interest accrues from the first deposit, not from when an empty goal was created
       if (currentAmount <= 0) goalUpdates.lastInterestAt = now
       currentAmount = round2(currentAmount + amount)
-      totalSavings = round2(totalSavings + amount)
       txType = move === 'in' ? 'transfer_to_savings' : 'deposit_to_savings'
     }
 
     goalUpdates.currentAmount = currentAmount
     tx.update(savingsRef, goalUpdates)
-    tx.update(userRef, { balance: newBalance, totalSavings })
+    const otherGoals = allGoalsSnap.docs.filter(d => d.id !== savingsId).map(d => d.data())
+    tx.update(userRef, { balance: newBalance, totalSavings: round2(sumSavings(otherGoals) + currentAmount) })
 
     const txRef = userRef.collection('transactions').doc()
     tx.set(txRef, {
@@ -209,7 +210,11 @@ export const deleteSavingsGoal = onCall<{ userId?: unknown; savingsId?: unknown;
   const savingsRef = db.doc(`users/${userId}/savings/${savingsId}`)
 
   await db.runTransaction(async (tx) => {
-    const [userSnap, savingsSnap] = await Promise.all([tx.get(userRef), tx.get(savingsRef)])
+    const [userSnap, savingsSnap, allGoalsSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(savingsRef),
+      tx.get(userRef.collection('savings')),
+    ])
     const user = userSnap.data()
     const goal = savingsSnap.data()
     if (!user || !goal) throw new HttpsError('not-found', 'errors.notFound')
@@ -218,20 +223,18 @@ export const deleteSavingsGoal = onCall<{ userId?: unknown; savingsId?: unknown;
     if (force !== true && isLocked(goal, now)) throw new HttpsError('failed-precondition', 'errors.savingsLocked')
 
     const balance = (user.balance as number | undefined) ?? 0
-    let totalSavings = (user.totalSavings as number | undefined) ?? 0
     let currentAmount = (goal.currentAmount as number | undefined) ?? 0
 
     const interest = proRataInterest(goal, now)
     if (interest > 0) {
       currentAmount = round2(currentAmount + interest)
-      totalSavings = round2(totalSavings + interest)
       writeInterestTransaction(tx, userId, interest, balance, goal, savingsId, now)
     }
 
     tx.delete(savingsRef)
     tx.update(userRef, {
       balance: round2(balance + currentAmount),
-      totalSavings: round2(totalSavings - currentAmount),
+      totalSavings: sumSavings(allGoalsSnap.docs.filter(d => d.id !== savingsId).map(d => d.data())),
     })
   })
 

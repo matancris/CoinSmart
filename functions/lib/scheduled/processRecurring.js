@@ -142,22 +142,30 @@ async function processChild(userId, now) {
         const [userSnap, allowancesSnap, savingsSnap] = await Promise.all([
             tx.get(userRef),
             tx.get(userRef.collection('allowances').where('status', '==', 'active')),
-            tx.get(userRef.collection('savings').where('status', '==', 'active')),
+            tx.get(userRef.collection('savings')),
         ]);
         if (!userSnap.exists)
             return { allowances: 0, interest: 0 };
+        const userData = userSnap.data() ?? {};
+        const storedTotal = userData.totalSavings ?? 0;
+        const goalAmounts = new Map(savingsSnap.docs.map(d => [d.id, d.data().currentAmount ?? 0]));
         const allowancePlans = allowancesSnap.docs
             .map(d => planAllowance(d.ref, d.data(), now))
             .filter((p) => p !== null && p.periods > 0);
         const interestPlans = savingsSnap.docs
+            .filter(d => d.data().status === 'active')
             .map(d => planInterest(d.ref, d.data(), now))
             .filter((p) => p !== null);
+        for (const plan of interestPlans)
+            goalAmounts.set(plan.ref.id, plan.newAmount);
+        // Also repairs totals that older app versions let drift away from the goals
+        const totalSavings = round2([...goalAmounts.values()].reduce((sum, amount) => sum + amount, 0));
         if (allowancePlans.length === 0 && interestPlans.length === 0) {
+            if (totalSavings !== storedTotal)
+                tx.update(userRef, { totalSavings });
             return { allowances: 0, interest: 0 };
         }
-        const userData = userSnap.data() ?? {};
         let balance = userData.balance ?? 0;
-        let totalSavings = userData.totalSavings ?? 0;
         const transactions = userRef.collection('transactions');
         let allowanceCount = 0;
         let interestCount = 0;
@@ -180,7 +188,6 @@ async function processChild(userId, now) {
         }
         for (const plan of interestPlans) {
             for (const payment of plan.payments) {
-                totalSavings = round2(totalSavings + payment);
                 const txRef = transactions.doc();
                 tx.set(txRef, {
                     id: txRef.id,

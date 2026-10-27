@@ -28,6 +28,12 @@ export function round2(value: number): number {
   return Math.round(value * 100) / 100
 }
 
+// totalSavings is a cached sum of the goals. Recomputing it, instead of adding to it, keeps it
+// from drifting away from what the goals actually hold
+export function sumSavings(goals: DocumentData[]): number {
+  return goals.reduce<number>((sum, goal) => round2(sum + ((goal.currentAmount as number | undefined) ?? 0)), 0)
+}
+
 export function requireDocId(value: unknown): string {
   if (typeof value !== 'string' || !DOC_ID_RE.test(value)) {
     throw new HttpsError('invalid-argument', 'errors.generic')
