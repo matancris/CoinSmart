@@ -49,6 +49,11 @@ export async function deleteSavingsGoal(userId: string, savingsId: string, force
   await remove({ userId, savingsId, force: force === true })
 }
 
+export async function renewSavingsGoal(userId: string, savingsId: string): Promise<void> {
+  const renew = httpsCallable(functions, 'renewSavingsGoal')
+  await renew({ userId, savingsId })
+}
+
 async function moveSavings(data: {
   userId: string
   savingsId: string
@@ -73,5 +78,6 @@ function parseSavingsGoal(id: string, data: Record<string, unknown>): SavingsGoa
     createdAt: toDate(data.createdAt),
     maturityDate: data.maturityDate ? toDate(data.maturityDate) : undefined,
     lastInterestAt: data.lastInterestAt ? toDate(data.lastInterestAt) : undefined,
+    maturedAt: data.maturedAt ? toDate(data.maturedAt) : undefined,
   }
 }

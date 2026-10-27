@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncWallet = exports.deleteSavingsGoal = exports.moveSavings = exports.createSavingsGoal = exports.createTransaction = exports.setChildPin = exports.createChild = exports.refreshChildSession = exports.childLogin = exports.checkFamilyCode = exports.processRecurring = exports.transferToChild = exports.onTransactionCreated = void 0;
+exports.syncWallet = exports.renewSavingsGoal = exports.deleteSavingsGoal = exports.moveSavings = exports.createSavingsGoal = exports.createTransaction = exports.setChildPin = exports.createChild = exports.refreshChildSession = exports.childLogin = exports.checkFamilyCode = exports.processRecurring = exports.transferToChild = exports.onTransactionCreated = void 0;
 const app_1 = require("firebase-admin/app");
 (0, app_1.initializeApp)();
 var onTransactionCreated_1 = require("./notifications/onTransactionCreated");
@@ -22,6 +22,7 @@ var savings_1 = require("./wallet/savings");
 Object.defineProperty(exports, "createSavingsGoal", { enumerable: true, get: function () { return savings_1.createSavingsGoal; } });
 Object.defineProperty(exports, "moveSavings", { enumerable: true, get: function () { return savings_1.moveSavings; } });
 Object.defineProperty(exports, "deleteSavingsGoal", { enumerable: true, get: function () { return savings_1.deleteSavingsGoal; } });
+Object.defineProperty(exports, "renewSavingsGoal", { enumerable: true, get: function () { return savings_1.renewSavingsGoal; } });
 var syncWallet_1 = require("./wallet/syncWallet");
 Object.defineProperty(exports, "syncWallet", { enumerable: true, get: function () { return syncWallet_1.syncWallet; } });
 //# sourceMappingURL=index.js.map

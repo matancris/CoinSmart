@@ -158,7 +158,12 @@
     "interestEarned": "Interest Earned",
     "lockedUntilMaturity": "Locked until maturity",
     "noLock": "No lock",
-    "setTarget": "Set a target amount"
+    "setTarget": "Set a target amount",
+    "matured": "Matured",
+    "renew": "Lock again for {{months}} months at {{rate}}%",
+    "renewTitle": "Lock again",
+    "renewConfirm": "Lock \"{{name}}\" again for {{months}} months at {{rate}}% annual interest? The money can't be withdrawn until the lock ends.",
+    "renewed": "Savings locked again"
   },
   "export": {
     "button": "Export to Excel",

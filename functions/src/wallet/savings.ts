@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { Timestamp, type DocumentData, type Transaction } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp, type DocumentData, type Transaction } from 'firebase-admin/firestore'
 import { authorizeForChild, cleanString, db, requireAmount, requireDocId, round2, sumSavings } from '../shared/access'
 
 type SavingsType = 'flexible' | 'locked_2m' | 'locked_6m'
@@ -35,6 +35,44 @@ function proRataInterest(data: DocumentData, now: Date): number {
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   return round2(currentAmount * (interestRate / 12) * (daysElapsed / daysInMonth))
+}
+
+function addMonths(from: Date, months: number): Date {
+  const date = new Date(from)
+  date.setMonth(date.getMonth() + months)
+  return date
+}
+
+export interface MaturitySettlement {
+  interest: number
+  // Fields to merge into the caller's single update of the goal doc
+  updates: Record<string, unknown>
+  // The goal as it reads after settling, for the caller's own interest logic
+  goal: DocumentData
+}
+
+// A locked goal earns its plan's rate only until maturityDate, then the flexible rate. Settling
+// pays what the locked rate owes up to maturity and switches the goal over, exactly once
+export function settleMaturity(data: DocumentData, now: Date): MaturitySettlement | null {
+  const maturityDate = toDate(data.maturityDate)
+  if (!maturityDate || maturityDate > now || data.maturedAt) return null
+
+  // Runs before the rate changes, so it pays the locked rate. Goals that already earned interest
+  // past maturity get nothing here and keep what they earned
+  const interest = proRataInterest(data, maturityDate)
+  const lastInterestAt = toDate(data.lastInterestAt) ?? toDate(data.createdAt) ?? maturityDate
+
+  const updates: Record<string, unknown> = {
+    interestRate: SAVINGS_PLANS.flexible.annualRate,
+    maturedAt: maturityDate,
+    lastInterestAt: lastInterestAt > maturityDate ? lastInterestAt : maturityDate,
+  }
+  if (interest > 0) {
+    updates.currentAmount = round2(((data.currentAmount as number | undefined) ?? 0) + interest)
+    updates.accruedInterest = round2(((data.accruedInterest as number | undefined) ?? 0) + interest)
+  }
+
+  return { interest, updates, goal: { ...data, ...updates } }
 }
 
 function writeInterestTransaction(
@@ -79,11 +117,7 @@ export const createSavingsGoal = onCall<CreateGoalRequest>(async (request) => {
   const target = targetAmount === undefined || targetAmount === null ? undefined : requireAmount(targetAmount)
 
   const now = new Date()
-  let maturityDate: Date | undefined
-  if (plan.lockMonths > 0) {
-    maturityDate = new Date(now)
-    maturityDate.setMonth(maturityDate.getMonth() + plan.lockMonths)
-  }
+  const maturityDate = plan.lockMonths > 0 ? addMonths(now, plan.lockMonths) : undefined
 
   const ref = db.collection(`users/${userId as string}/savings`).doc()
   await ref.set({
@@ -141,14 +175,21 @@ export const moveSavings = onCall<MoveRequest>(async (request) => {
       tx.get(userRef.collection('savings')),
     ])
     const user = userSnap.data()
-    const goal = savingsSnap.data()
-    if (!user || !goal) throw new HttpsError('not-found', 'errors.notFound')
+    const storedGoal = savingsSnap.data()
+    if (!user || !storedGoal) throw new HttpsError('not-found', 'errors.notFound')
 
     const now = new Date()
     const balance = (user.balance as number | undefined) ?? 0
+    // Settle before any amount changes, so money added to a matured goal never earns the locked rate
+    const settlement = settleMaturity(storedGoal, now)
+    const goal = settlement?.goal ?? storedGoal
+    if (settlement && settlement.interest > 0) {
+      writeInterestTransaction(tx, userId, settlement.interest, balance, goal, savingsId, now)
+    }
+
     let currentAmount = (goal.currentAmount as number | undefined) ?? 0
     let newBalance = balance
-    const goalUpdates: Record<string, unknown> = {}
+    const goalUpdates: Record<string, unknown> = { ...settlement?.updates }
     let txType: string
 
     if (move === 'out') {
@@ -216,13 +257,19 @@ export const deleteSavingsGoal = onCall<{ userId?: unknown; savingsId?: unknown;
       tx.get(userRef.collection('savings')),
     ])
     const user = userSnap.data()
-    const goal = savingsSnap.data()
-    if (!user || !goal) throw new HttpsError('not-found', 'errors.notFound')
+    const storedGoal = savingsSnap.data()
+    if (!user || !storedGoal) throw new HttpsError('not-found', 'errors.notFound')
 
     const now = new Date()
-    if (force !== true && isLocked(goal, now)) throw new HttpsError('failed-precondition', 'errors.savingsLocked')
+    if (force !== true && isLocked(storedGoal, now)) throw new HttpsError('failed-precondition', 'errors.savingsLocked')
 
     const balance = (user.balance as number | undefined) ?? 0
+    const settlement = settleMaturity(storedGoal, now)
+    const goal = settlement?.goal ?? storedGoal
+    if (settlement && settlement.interest > 0) {
+      writeInterestTransaction(tx, userId, settlement.interest, balance, goal, savingsId, now)
+    }
+
     let currentAmount = (goal.currentAmount as number | undefined) ?? 0
 
     const interest = proRataInterest(goal, now)
@@ -236,6 +283,69 @@ export const deleteSavingsGoal = onCall<{ userId?: unknown; savingsId?: unknown;
       balance: round2(balance + currentAmount),
       totalSavings: sumSavings(allGoalsSnap.docs.filter(d => d.id !== savingsId).map(d => d.data())),
     })
+  })
+
+  return { success: true }
+})
+
+// Locks a matured goal again for its plan's period. Locking only limits the child, so the child
+// may do it as well as a parent
+export const renewSavingsGoal = onCall<{ userId?: unknown; savingsId?: unknown }>(async (request) => {
+  const { userId: rawUserId, savingsId: rawSavingsId } = request.data ?? {}
+  await authorizeForChild(request.auth, rawUserId)
+  const userId = rawUserId as string
+  const savingsId = requireDocId(rawSavingsId)
+
+  const userRef = db.doc(`users/${userId}`)
+  const savingsRef = db.doc(`users/${userId}/savings/${savingsId}`)
+
+  await db.runTransaction(async (tx) => {
+    const [userSnap, savingsSnap, allGoalsSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(savingsRef),
+      tx.get(userRef.collection('savings')),
+    ])
+    const user = userSnap.data()
+    const storedGoal = savingsSnap.data()
+    if (!user || !storedGoal) throw new HttpsError('not-found', 'errors.notFound')
+
+    const now = new Date()
+    const savingsType = storedGoal.savingsType
+    const plan = typeof savingsType === 'string' && savingsType in SAVINGS_PLANS
+      ? SAVINGS_PLANS[savingsType as SavingsType]
+      : null
+    const maturityDate = toDate(storedGoal.maturityDate)
+    if (!plan || plan.lockMonths <= 0 || !maturityDate || maturityDate > now) {
+      throw new HttpsError('failed-precondition', 'errors.generic')
+    }
+
+    const balance = (user.balance as number | undefined) ?? 0
+    const settlement = settleMaturity(storedGoal, now)
+    const goal = settlement?.goal ?? storedGoal
+    if (settlement && settlement.interest > 0) {
+      writeInterestTransaction(tx, userId, settlement.interest, balance, goal, savingsId, now)
+    }
+
+    // Pay the flexible rate owed since maturity before the locked rate takes over again
+    let currentAmount = (goal.currentAmount as number | undefined) ?? 0
+    let accruedInterest = (goal.accruedInterest as number | undefined) ?? 0
+    const interest = proRataInterest(goal, now)
+    if (interest > 0) {
+      currentAmount = round2(currentAmount + interest)
+      accruedInterest = round2(accruedInterest + interest)
+      writeInterestTransaction(tx, userId, interest, balance, goal, savingsId, now)
+    }
+
+    tx.update(savingsRef, {
+      currentAmount,
+      accruedInterest,
+      interestRate: plan.annualRate,
+      maturityDate: addMonths(now, plan.lockMonths),
+      lastInterestAt: now,
+      maturedAt: FieldValue.delete(),
+    })
+    const otherGoals = allGoalsSnap.docs.filter(d => d.id !== savingsId).map(d => d.data())
+    tx.update(userRef, { totalSavings: round2(sumSavings(otherGoals) + currentAmount) })
   })
 
   return { success: true }

@@ -14,4 +14,6 @@ export interface SavingsGoal {
   createdAt: Date
   maturityDate?: Date
   lastInterestAt?: Date
+  // Set once the server has switched the goal to the flexible rate at maturity
+  maturedAt?: Date
 }
