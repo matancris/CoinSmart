@@ -5,6 +5,7 @@ exports.processChild = processChild;
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const v2_1 = require("firebase-functions/v2");
 const firestore_1 = require("firebase-admin/firestore");
+const savings_1 = require("../wallet/savings");
 const db = (0, firestore_1.getFirestore)();
 // Schedules are defined in the families' local time, but Cloud Functions run in UTC
 const TIME_ZONE = 'Asia/Jerusalem';
@@ -142,22 +143,38 @@ async function processChild(userId, now) {
         const [userSnap, allowancesSnap, savingsSnap] = await Promise.all([
             tx.get(userRef),
             tx.get(userRef.collection('allowances').where('status', '==', 'active')),
-            tx.get(userRef.collection('savings').where('status', '==', 'active')),
+            tx.get(userRef.collection('savings')),
         ]);
         if (!userSnap.exists)
             return { allowances: 0, interest: 0 };
+        const userData = userSnap.data() ?? {};
+        const storedTotal = userData.totalSavings ?? 0;
+        const goalAmounts = new Map(savingsSnap.docs.map(d => [d.id, d.data().currentAmount ?? 0]));
         const allowancePlans = allowancesSnap.docs
             .map(d => planAllowance(d.ref, d.data(), now))
             .filter((p) => p !== null && p.periods > 0);
-        const interestPlans = savingsSnap.docs
-            .map(d => planInterest(d.ref, d.data(), now))
-            .filter((p) => p !== null);
-        if (allowancePlans.length === 0 && interestPlans.length === 0) {
+        // Maturity is settled first, so interest after the maturity date is planned at the flexible rate
+        const goalWork = savingsSnap.docs
+            .filter(d => d.data().status === 'active')
+            .map((d) => {
+            const settlement = (0, savings_1.settleMaturity)(d.data(), now);
+            const goal = settlement?.goal ?? d.data();
+            return { ref: d.ref, name: goal.name ?? '', settlement, plan: planInterest(d.ref, goal, now) };
+        })
+            .filter(w => w.settlement !== null || w.plan !== null);
+        for (const { ref, settlement, plan } of goalWork) {
+            const amount = plan?.newAmount ?? settlement?.goal.currentAmount;
+            if (amount !== undefined)
+                goalAmounts.set(ref.id, amount);
+        }
+        // Also repairs totals that older app versions let drift away from the goals
+        const totalSavings = round2([...goalAmounts.values()].reduce((sum, amount) => sum + amount, 0));
+        if (allowancePlans.length === 0 && goalWork.length === 0) {
+            if (totalSavings !== storedTotal)
+                tx.update(userRef, { totalSavings });
             return { allowances: 0, interest: 0 };
         }
-        const userData = userSnap.data() ?? {};
         let balance = userData.balance ?? 0;
-        let totalSavings = userData.totalSavings ?? 0;
         const transactions = userRef.collection('transactions');
         let allowanceCount = 0;
         let interestCount = 0;
@@ -178,26 +195,30 @@ async function processChild(userId, now) {
             }
             tx.update(plan.ref, { lastExecutedAt: now, nextDueAt: plan.nextDueAt });
         }
-        for (const plan of interestPlans) {
-            for (const payment of plan.payments) {
-                totalSavings = round2(totalSavings + payment);
+        for (const { ref, name, settlement, plan } of goalWork) {
+            const settlementPayments = settlement && settlement.interest > 0 ? [settlement.interest] : [];
+            for (const payment of [...settlementPayments, ...(plan?.payments ?? [])]) {
                 const txRef = transactions.doc();
                 tx.set(txRef, {
                     id: txRef.id,
                     type: 'interest',
                     amount: payment,
                     balanceAfter: balance,
-                    description: plan.name,
-                    savingsId: plan.ref.id,
+                    description: name,
+                    savingsId: ref.id,
                     createdAt: now,
                     createdBy: 'system',
                 });
                 interestCount++;
             }
-            tx.update(plan.ref, {
-                currentAmount: plan.newAmount,
-                accruedInterest: plan.accruedInterest,
-                lastInterestAt: now,
+            // One update per goal, so the interest plan's fields win over the settlement's
+            tx.update(ref, {
+                ...settlement?.updates,
+                ...(plan && {
+                    currentAmount: plan.newAmount,
+                    accruedInterest: plan.accruedInterest,
+                    lastInterestAt: now,
+                }),
             });
         }
         tx.update(userRef, { balance, totalSavings });

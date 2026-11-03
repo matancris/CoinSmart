@@ -42,6 +42,7 @@ interface WalletState {
     depositToSavings: (userId: string, savingsId: string, amount: number) => Promise<boolean>
     withdrawFromSavings: (userId: string, savingsId: string, amount: number, force?: boolean) => Promise<boolean>
     deleteSavingsGoal: (userId: string, savingsId: string, force?: boolean) => Promise<boolean>
+    renewSavingsGoal: (userId: string, savingsId: string) => Promise<boolean>
     deleteTransaction: (userId: string, transactionId: string) => Promise<boolean>
     setBalance: (userId: string, newBalance: number) => Promise<boolean>
     fetchAllowances: (userId: string) => Promise<void>
@@ -299,6 +300,20 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         return true
       } catch (error) {
         const appError = handleError(error, { operation: 'deleteSavingsGoal' })
+        toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
+        return false
+      }
+    },
+
+    renewSavingsGoal: async (userId, savingsId) => {
+      try {
+        await savingsService.renewSavingsGoal(userId, savingsId)
+        const savingsGoals = await savingsService.getSavingsGoals(userId)
+        set({ savingsGoals })
+        toast(i18n.t('savings.renewed'), 'success')
+        return true
+      } catch (error) {
+        const appError = handleError(error, { operation: 'renewSavingsGoal' })
         toast(i18n.t(appError.message.startsWith('errors.') ? appError.message : 'errors.generic'), 'error')
         return false
       }

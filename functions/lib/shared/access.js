@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CHILD_SESSION_MS = exports.db = void 0;
 exports.round2 = round2;
+exports.sumSavings = sumSavings;
 exports.requireDocId = requireDocId;
 exports.requireAmount = requireAmount;
 exports.cleanString = cleanString;
@@ -17,6 +18,11 @@ exports.CHILD_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 const DOC_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 function round2(value) {
     return Math.round(value * 100) / 100;
+}
+// totalSavings is a cached sum of the goals. Recomputing it, instead of adding to it, keeps it
+// from drifting away from what the goals actually hold
+function sumSavings(goals) {
+    return goals.reduce((sum, goal) => round2(sum + (goal.currentAmount ?? 0)), 0);
 }
 function requireDocId(value) {
     if (typeof value !== 'string' || !DOC_ID_RE.test(value)) {

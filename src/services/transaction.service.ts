@@ -101,7 +101,6 @@ export async function deleteTransaction(userId: string, transactionId: string): 
 
     const savingsData = savingsSnap.data()
     const currentSavingsAmount = (savingsData.currentAmount as number) ?? 0
-    const totalSavings = (userSnap.data().totalSavings as number) ?? 0
     // Reverse the effect: a withdrawal took money out of the goal, every other type put money in
     const savingsDelta = tx.type === 'transfer_from_savings' ? tx.amount : -tx.amount
 
@@ -114,7 +113,15 @@ export async function deleteTransaction(userId: string, transactionId: string): 
     }
 
     batch.update(savingsRef, savingsUpdates)
-    userUpdates.totalSavings = roundCents(totalSavings + savingsDelta)
+
+    // Sum the goals rather than adjusting the stored total, so it can't drift from them
+    const goalsSnap = await getDocs(collection(db, 'users', userId, 'savings'))
+    userUpdates.totalSavings = goalsSnap.docs.reduce((sum, goalDoc) => {
+      const amount = goalDoc.id === tx.savingsId
+        ? savingsUpdates.currentAmount
+        : (goalDoc.data().currentAmount as number) ?? 0
+      return roundCents(sum + amount)
+    }, 0)
   }
 
   batch.update(userRef, userUpdates)
