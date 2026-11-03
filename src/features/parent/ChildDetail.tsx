@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore, useWalletStore, useFamilyStore } from '@/stores'
 import { Button, Input, Avatar, Spinner, EmptyState, Modal, Select, Badge, Toggle } from '@/components/ui'
 import { toast } from '@/components/ui/Toast'
-import { formatCurrency, formatDateTime, formatDate, isGoalLocked, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES, EMOJI_OPTIONS } from '@/utils'
-import type { SavingsType, AllowanceFrequency, Allowance } from '@/types'
+import { formatCurrency, formatDateTime, formatDate, isGoalLocked, isGoalMatured, SAVINGS_PLANS, isValidPin, TX_ICONS, POSITIVE_TYPES, EMOJI_OPTIONS } from '@/utils'
+import type { SavingsGoal, SavingsType, AllowanceFrequency, Allowance } from '@/types'
 import styles from './ChildDetail.module.scss'
 
 const PLAN_TYPES: SavingsType[] = ['flexible', 'locked_2m', 'locked_6m']
@@ -38,6 +38,7 @@ export function ChildDetail() {
   const [showTransfer, setShowTransfer] = useState<string | null>(null)
   const [transferAmount, setTransferAmount] = useState('')
   const [transferMode, setTransferMode] = useState<'in' | 'out' | 'direct'>('in')
+  const [renewGoal, setRenewGoal] = useState<SavingsGoal | null>(null)
 
   const [showSetBalance, setShowSetBalance] = useState(false)
   const [newBalance, setNewBalance] = useState('')
@@ -175,6 +176,14 @@ export function ChildDetail() {
     if (!child || !confirm(t('common.confirmDelete'))) return
     await walletActions.deleteSavingsGoal(child.id, goalId, true)
   }, [child, walletActions, t])
+
+  const handleRenew = useCallback(async () => {
+    if (!child || !renewGoal) return
+    setSubmitting(true)
+    const success = await walletActions.renewSavingsGoal(child.id, renewGoal.id)
+    setSubmitting(false)
+    if (success) setRenewGoal(null)
+  }, [child, renewGoal, walletActions])
 
   const openAllowanceModal = useCallback((allowance?: Allowance) => {
     if (allowance) {
@@ -475,6 +484,10 @@ export function ChildDetail() {
                 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
                 : 0
               const locked = isGoalLocked(goal)
+              const matured = isGoalMatured(goal)
+              const renewPlan = matured ? SAVINGS_PLANS[goal.savingsType] : null
+              // A matured goal earns the flexible rate even before the server has settled it
+              const interestRate = matured ? SAVINGS_PLANS.flexible.annualRate : goal.interestRate
 
               return (
                 <div key={goal.id} className={styles.goalCard}>
@@ -482,11 +495,16 @@ export function ChildDetail() {
                     <span className={styles.goalName}>🚀 {goal.name}</span>
                     <span className={styles.goalAmount}>{formatCurrency(goal.currentAmount)}</span>
                   </div>
-                  {(goal.interestRate > 0 || locked || goal.accruedInterest > 0) && (
+                  {(interestRate > 0 || locked || matured || goal.accruedInterest > 0) && (
                     <div className={styles.goalInterestInfo}>
-                      {goal.interestRate > 0 && (
+                      {interestRate > 0 && (
                         <span className={styles.interestBadge}>
-                          ✨ {Math.round(goal.interestRate * 100)}% {t('savings.annualRate')}
+                          ✨ {Math.round(interestRate * 100)}% {t('savings.annualRate')}
+                        </span>
+                      )}
+                      {matured && (
+                        <span className={styles.maturedBadge}>
+                          🎉 {t('savings.matured')}
                         </span>
                       )}
                       {locked && goal.maturityDate && (
@@ -545,6 +563,15 @@ export function ChildDetail() {
                     >
                       {t('common.delete')}
                     </Button>
+                    {renewPlan && renewPlan.lockMonths > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setRenewGoal(goal)}
+                      >
+                        {t('savings.renew', { months: renewPlan.lockMonths, rate: Math.round(renewPlan.annualRate * 100) })}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )
@@ -701,6 +728,32 @@ export function ChildDetail() {
           min="0"
           dir="ltr"
         />
+      </Modal>
+
+      <Modal
+        isOpen={!!renewGoal}
+        onClose={() => setRenewGoal(null)}
+        title={t('savings.renewTitle')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRenewGoal(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleRenew} disabled={submitting}>
+              {submitting ? t('common.loading') : t('common.confirm')}
+            </Button>
+          </>
+        }
+      >
+        {renewGoal && (
+          <p className={styles.confirmText}>
+            {t('savings.renewConfirm', {
+              name: renewGoal.name,
+              months: SAVINGS_PLANS[renewGoal.savingsType].lockMonths,
+              rate: Math.round(SAVINGS_PLANS[renewGoal.savingsType].annualRate * 100),
+            })}
+          </p>
+        )}
       </Modal>
 
       <Modal

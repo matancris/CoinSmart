@@ -10,3 +10,9 @@ export function isGoalLocked(goal: { maturityDate?: Date }): boolean {
   if (!goal.maturityDate) return false
   return new Date() < goal.maturityDate
 }
+
+// The server may not have settled the goal yet, so a passed maturityDate also counts
+export function isGoalMatured(goal: { maturityDate?: Date; maturedAt?: Date }): boolean {
+  if (goal.maturedAt) return true
+  return !!goal.maturityDate && goal.maturityDate <= new Date()
+}

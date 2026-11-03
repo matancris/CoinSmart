@@ -223,6 +223,13 @@
       border-radius: $radius-full;
     }
 
+    .maturedBadge {
+      padding: space(1) space(2);
+      @include text($text-xs, $font-medium, $clr-success);
+      background: rgba($clr-success, 0.1);
+      border-radius: $radius-full;
+    }
+
     .interestEarned {
       @include text($text-xs, $font-regular, $clr-text-secondary);
     }
@@ -473,4 +480,10 @@
     color: $color;
     background: rgba($color, 0.12);
   }
+}
+
+// Modal content renders outside .page, so this stays top-level
+.confirmText {
+  @include text($text-sm, $font-regular, $clr-text-secondary);
+  line-height: 1.6;
 }

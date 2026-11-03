@@ -158,7 +158,12 @@
     "interestEarned": "ריבית שנצברה",
     "lockedUntilMaturity": "נעול עד מועד הפירעון",
     "noLock": "ללא נעילה",
-    "setTarget": "הגדר סכום יעד"
+    "setTarget": "הגדר סכום יעד",
+    "matured": "החיסכון הבשיל",
+    "renew": "נעל שוב ל-{{months}} חודשים ב-{{rate}}%",
+    "renewTitle": "נעילה מחדש",
+    "renewConfirm": "לנעול את \"{{name}}\" שוב ל-{{months}} חודשים ב-{{rate}}% ריבית שנתית? לא ניתן יהיה למשוך את הכסף עד סוף הנעילה.",
+    "renewed": "החיסכון ננעל מחדש"
   },
   "export": {
     "button": "ייצוא לאקסל",

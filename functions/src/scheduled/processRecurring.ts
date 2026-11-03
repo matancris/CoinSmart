@@ -1,6 +1,7 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { logger } from 'firebase-functions/v2'
 import { getFirestore, Timestamp, type DocumentData } from 'firebase-admin/firestore'
+import { settleMaturity, type MaturitySettlement } from '../wallet/savings'
 
 const db = getFirestore()
 
@@ -133,6 +134,13 @@ interface InterestPlan {
   accruedInterest: number
 }
 
+interface GoalWork {
+  ref: FirebaseFirestore.DocumentReference
+  name: string
+  settlement: MaturitySettlement | null
+  plan: InterestPlan | null
+}
+
 function planInterest(
   ref: FirebaseFirestore.DocumentReference,
   data: DocumentData,
@@ -193,16 +201,24 @@ export async function processChild(userId: string, now: Date): Promise<{ allowan
     const allowancePlans = allowancesSnap.docs
       .map(d => planAllowance(d.ref, d.data(), now))
       .filter((p): p is AllowancePlan => p !== null && p.periods > 0)
-    const interestPlans = savingsSnap.docs
+    // Maturity is settled first, so interest after the maturity date is planned at the flexible rate
+    const goalWork = savingsSnap.docs
       .filter(d => d.data().status === 'active')
-      .map(d => planInterest(d.ref, d.data(), now))
-      .filter((p): p is InterestPlan => p !== null)
-    for (const plan of interestPlans) goalAmounts.set(plan.ref.id, plan.newAmount)
+      .map((d): GoalWork => {
+        const settlement = settleMaturity(d.data(), now)
+        const goal = settlement?.goal ?? d.data()
+        return { ref: d.ref, name: (goal.name as string) ?? '', settlement, plan: planInterest(d.ref, goal, now) }
+      })
+      .filter(w => w.settlement !== null || w.plan !== null)
+    for (const { ref, settlement, plan } of goalWork) {
+      const amount = plan?.newAmount ?? (settlement?.goal.currentAmount as number | undefined)
+      if (amount !== undefined) goalAmounts.set(ref.id, amount)
+    }
 
     // Also repairs totals that older app versions let drift away from the goals
     const totalSavings = round2([...goalAmounts.values()].reduce((sum, amount) => sum + amount, 0))
 
-    if (allowancePlans.length === 0 && interestPlans.length === 0) {
+    if (allowancePlans.length === 0 && goalWork.length === 0) {
       if (totalSavings !== storedTotal) tx.update(userRef, { totalSavings })
       return { allowances: 0, interest: 0 }
     }
@@ -230,25 +246,30 @@ export async function processChild(userId: string, now: Date): Promise<{ allowan
       tx.update(plan.ref, { lastExecutedAt: now, nextDueAt: plan.nextDueAt })
     }
 
-    for (const plan of interestPlans) {
-      for (const payment of plan.payments) {
+    for (const { ref, name, settlement, plan } of goalWork) {
+      const settlementPayments = settlement && settlement.interest > 0 ? [settlement.interest] : []
+      for (const payment of [...settlementPayments, ...(plan?.payments ?? [])]) {
         const txRef = transactions.doc()
         tx.set(txRef, {
           id: txRef.id,
           type: 'interest',
           amount: payment,
           balanceAfter: balance,
-          description: plan.name,
-          savingsId: plan.ref.id,
+          description: name,
+          savingsId: ref.id,
           createdAt: now,
           createdBy: 'system',
         })
         interestCount++
       }
-      tx.update(plan.ref, {
-        currentAmount: plan.newAmount,
-        accruedInterest: plan.accruedInterest,
-        lastInterestAt: now,
+      // One update per goal, so the interest plan's fields win over the settlement's
+      tx.update(ref, {
+        ...settlement?.updates,
+        ...(plan && {
+          currentAmount: plan.newAmount,
+          accruedInterest: plan.accruedInterest,
+          lastInterestAt: now,
+        }),
       })
     }
 
