@@ -95,6 +95,8 @@
 
   .goalActions {
     @include flex-row(2);
+    // Buttons don't shrink, so without wrapping the row pushes the whole page wider than the phone
+    flex-wrap: wrap;
   }
 }
 
